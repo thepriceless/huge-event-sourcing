@@ -1,6 +1,11 @@
+/*
 package ru.quipy.logic
 
-import ru.quipy.api.*
+import ru.quipy.api.project.ProjectAggregate
+import ru.quipy.api.project.ProjectCreatedEvent
+import ru.quipy.api.project.TagAssignedToTaskEvent
+import ru.quipy.api.project.TagCreatedEvent
+import ru.quipy.api.project.TaskCreatedEvent
 import ru.quipy.core.annotations.StateTransitionFunc
 import ru.quipy.domain.AggregateState
 import java.util.*
@@ -51,12 +56,22 @@ data class TagEntity(
     val name: String
 )
 
+data class StatusEntity(
+    val id: UUID = UUID.randomUUID(),
+    val projectId: UUID,
+    val name: String,
+    val color: String
+)
+
+*/
 /**
  * Demonstrates that the transition functions might be representer by "extension" functions, not only class members functions
- */
+ *//*
+
 @StateTransitionFunc
 fun ProjectAggregateState.tagAssignedApply(event: TagAssignedToTaskEvent) {
     tasks[event.taskId]?.tagsAssigned?.add(event.tagId)
         ?: throw IllegalArgumentException("No such task: ${event.taskId}")
     updatedAt = createdAt
 }
+*/
