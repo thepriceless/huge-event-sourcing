@@ -6,14 +6,10 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import ru.quipy.api.member.MemberAggregate
 import ru.quipy.api.project.ProjectAggregate
-import ru.quipy.api.taskstatus.TaskStatusAggregate
 import ru.quipy.api.user.UserAggregate
 import ru.quipy.core.EventSourcingServiceFactory
-import ru.quipy.logic.project.MemberAggregateState
 import ru.quipy.logic.project.ProjectAggregateState
 import ru.quipy.logic.project.UserAggregateState
-import ru.quipy.logic.taskstatus.TaskStatusAggregateState
-import ru.quipy.projections.AnnotationBasedProjectEventsSubscriber
 import ru.quipy.streams.AggregateEventStreamManager
 import ru.quipy.streams.AggregateSubscriptionsManager
 import java.util.*
@@ -45,12 +41,6 @@ class EventSourcingLibConfiguration {
     private val logger = LoggerFactory.getLogger(EventSourcingLibConfiguration::class.java)
 
     @Autowired
-    private lateinit var subscriptionsManager: AggregateSubscriptionsManager
-
-    @Autowired
-    private lateinit var projectEventSubscriber: AnnotationBasedProjectEventsSubscriber
-
-    @Autowired
     private lateinit var eventSourcingServiceFactory: EventSourcingServiceFactory
 
     @Autowired
@@ -63,18 +53,10 @@ class EventSourcingLibConfiguration {
     fun projectService() = eventSourcingServiceFactory.create<UUID, ProjectAggregate, ProjectAggregateState>()
 
     @Bean
-    fun taskStatusService() = eventSourcingServiceFactory.create<UUID, TaskStatusAggregate, TaskStatusAggregateState>()
-
-    @Bean
     fun userService() = eventSourcingServiceFactory.create<String, UserAggregate, UserAggregateState>()
-
-    @Bean
-    fun memberService() = eventSourcingServiceFactory.create<UUID, MemberAggregate, MemberAggregateState>()
 
     @PostConstruct
     fun init() {
-        // Demonstrates how to explicitly subscribe the instance of annotation based subscriber to some stream. See the [AggregateSubscriptionsManager]
-        subscriptionsManager.subscribe<ProjectAggregate>(projectEventSubscriber)
 
         // Demonstrates how you can set up the listeners to the event stream
         eventStreamManager.maintenance {
