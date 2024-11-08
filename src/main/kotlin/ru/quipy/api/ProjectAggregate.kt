@@ -1,6 +1,8 @@
-package ru.quipy.api.project
+package ru.quipy.api
 
+import ru.quipy.core.annotations.AggregateType
 import ru.quipy.core.annotations.DomainEvent
+import ru.quipy.domain.Aggregate
 import ru.quipy.domain.Event
 import java.util.*
 
@@ -13,6 +15,9 @@ const val MEMBER_CREATED_EVENT = "USER_CREATED_EVENT"
 const val STATUSES_UPDATED_EVENT = "STATUSES_UPDATED_EVENT"
 const val MEMBER_ASSIGNED_EVENT = "MEMBER_ASSIGNED_EVENT"
 const val TASK_RENAMED_EVENT = "TASK_RENAMED_EVENT"
+
+@AggregateType(aggregateEventsTableName = "aggregate-project")
+class ProjectAggregate : Aggregate
 
 @DomainEvent(name = PROJECT_CREATED_EVENT)
 class ProjectCreatedEvent(

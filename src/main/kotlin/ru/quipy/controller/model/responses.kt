@@ -1,6 +1,6 @@
 package ru.quipy.controller.model
 
-import ru.quipy.api.project.*
+import ru.quipy.api.*
 
 data class StatusCreatedResponse(
     val possibleStatusesUpdatedEvent: PossibleStatusesUpdatedEvent,

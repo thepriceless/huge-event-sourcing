@@ -1,6 +1,6 @@
 package ru.quipy.logic.project
 
-import ru.quipy.api.project.*
+import ru.quipy.api.*
 import ru.quipy.logic.project.ProjectAggregateState.Companion.DEFAULT_STATUS_COLOR
 import ru.quipy.logic.project.ProjectAggregateState.Companion.DEFAULT_STATUS_NAME
 import java.util.*
@@ -55,9 +55,7 @@ fun ProjectAggregateState.updateTaskStatus(
     taskId: UUID,
     statusId: UUID,
 ): TaskStatusUpdatedEvent {
-    if (statuses.none { it.id == statusId }) {
-        throw IllegalArgumentException("Status doesn't exist: $statusId")
-    }
+    require(statuses.any { it.id == statusId }) { "Status doesn't exist" }
 
     return TaskStatusUpdatedEvent(
         taskId = taskId,

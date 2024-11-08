@@ -1,8 +1,6 @@
 package ru.quipy.logic.project
 
-import ru.quipy.api.project.ProjectCreatedEvent
-import ru.quipy.api.user.UserCreatedEvent
-import java.util.*
+import ru.quipy.api.UserCreatedEvent
 
 fun UserAggregateState.createUser(
     username: String,

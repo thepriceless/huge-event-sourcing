@@ -1,11 +1,9 @@
 package ru.quipy.logic.project
 
-import ru.quipy.api.project.ProjectCreatedEvent
-import ru.quipy.api.user.UserAggregate
-import ru.quipy.api.user.UserCreatedEvent
+import ru.quipy.api.UserAggregate
+import ru.quipy.api.UserCreatedEvent
 import ru.quipy.core.annotations.StateTransitionFunc
 import ru.quipy.domain.AggregateState
-import java.util.*
 
 // Service's business logic
 class UserAggregateState : AggregateState<String, UserAggregate> {

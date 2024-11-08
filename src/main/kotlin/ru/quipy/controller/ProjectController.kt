@@ -1,8 +1,8 @@
 package ru.quipy.controller
 
 import org.springframework.web.bind.annotation.*
-import ru.quipy.api.project.*
-import ru.quipy.api.user.UserAggregate
+import ru.quipy.api.*
+import ru.quipy.api.UserAggregate
 import ru.quipy.controller.model.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.*
