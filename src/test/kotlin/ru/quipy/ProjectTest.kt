@@ -1,9 +1,11 @@
 package ru.quipy
 
+import org.hamcrest.Matchers.equalToIgnoringCase
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -12,11 +14,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import ru.quipy.api.PROJECT_CREATED_EVENT
-import ru.quipy.controller.model.AddMemberToProjectRequest
-import ru.quipy.controller.model.CreateProjectRequest
-import ru.quipy.controller.model.CreateTaskRequest
-
-import ru.quipy.controller.model.CreateUserRequest
+import ru.quipy.controller.model.*
 import ru.quipy.logic.project.ProjectAggregateState.Companion.DEFAULT_STATUS_COLOR
 import ru.quipy.logic.project.ProjectAggregateState.Companion.DEFAULT_STATUS_NAME
 import java.util.UUID
@@ -32,64 +30,10 @@ class ProjectTest {
     private lateinit var mockMvc: MockMvc
 
     @Test
-    fun `project can be created`() {
-        val createProjectRequest = CreateProjectRequest(
-            title = "New Project",
-            username = user1.username
-        )
-
-        mockMvc.perform(
-            post("/projects")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createProjectRequest))
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.projectCreatedEvent.title").value("New Project"))
-            .andExpect(jsonPath("$.projectCreatedEvent.name").value(PROJECT_CREATED_EVENT))
-            .andExpect(jsonPath("$.projectCreatedEvent.version").value(1))
-
-            .andExpect(jsonPath("$.memberCreatedEvent.username").value("vamos"))
-            .andExpect(jsonPath("$.memberCreatedEvent.firstName").value("Kylian"))
-            .andExpect(jsonPath("$.memberCreatedEvent.middleName").value("Mbappe"))
-            .andExpect(jsonPath("$.memberCreatedEvent.lastName").value("Petrovich"))
-            .andExpect(jsonPath("$.memberCreatedEvent.projectId").isNotEmpty)
-
-            .andExpect(jsonPath("$.statusCreatedEvent.color").value(DEFAULT_STATUS_COLOR))
-            .andExpect(jsonPath("$.statusCreatedEvent.statusName").value(DEFAULT_STATUS_NAME))
-    }
-
-    @Test
-    @DisplayName("""
-        1. Создаем проекта от лица юзера 1
-        2. Добавляем в проект участником юзера 2
-        3. Добавляем задачу в проект, назначая её на пользователя 2
-    """)
-    fun `task can be added to project`() {
-        // Создаём проекта от лица юзера 1
-        val createProjectRequest = CreateProjectRequest(
-            title = "Project nice",
-            username = user1.username
-        )
-
-        val projectResponse = mockMvc.perform(
-            post("/projects")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createProjectRequest))
-        )
-            .andExpect(status().isOk)
-            .andReturn()
-
-        // Получаем id созданного проекта и id созданного статуса из ответа
-        val projectId = objectMapper
-            .readTree(projectResponse.response.contentAsString)["projectCreatedEvent"]["projectId"].asText()
-        val statusId = objectMapper
-            .readTree(projectResponse.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
-
-        // Добавляем в проект участником юзера 2
+    fun `member can be added to project`() {
         val createMemberRequest = AddMemberToProjectRequest(username = user2.username)
 
-        val addMemberToProjectResponse = mockMvc.perform(
+        mockMvc.perform(
             post("/projects/$projectId/members")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createMemberRequest))
@@ -100,19 +44,16 @@ class ProjectTest {
             .andExpect(jsonPath("$.firstName").value(user2.firstName))
             .andExpect(jsonPath("$.middleName").value(user2.middleName))
             .andExpect(jsonPath("$.lastName").value(user2.lastName))
-            .andExpect(jsonPath("$.projectId").value(projectId))
             .andReturn()
+    }
 
-        // Добавляем задачу в проект, назначая её на пользователя 2
-
-        val assigneeId = objectMapper
-            .readTree(addMemberToProjectResponse.response.contentAsString)["memberId"].asText()
-
+    @Test
+    @DisplayName("В созданный проект добавляем новую задачу")
+    fun `task can be added to project`() {
         val createTaskRequest = CreateTaskRequest(
-            projectId = UUID.fromString(projectId),
+            projectId = projectId,
             title = "New Task",
-            statusId = UUID.fromString(statusId),
-            assignees = listOf(UUID.fromString(assigneeId))
+            statusId = statusId,
         )
 
         mockMvc.perform(
@@ -123,10 +64,254 @@ class ProjectTest {
             .andExpect(status().isOk)
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.title").value("New Task"))
-            .andExpect(jsonPath("$.projectId").value(projectId))
-            .andExpect(jsonPath("$.statusId").value(statusId))
-            .andExpect(jsonPath("$.assignees").isArray)
-            .andExpect(jsonPath("$.assignees[0]").value(assigneeId))
+            .andExpect(jsonPath("$.statusId").value(equalToIgnoringCase(statusId.toString().trim())))
+            .andExpect(jsonPath("$.assignees").isEmpty)
+            .andReturn()
+    }
+
+    @Test
+    fun `member can be assigned to task`() {
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "Taskaaa",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+        // Добавляем юзера 3 в проект
+        val createMemberRequest = AddMemberToProjectRequest(username = user3.username)
+
+        val addMember3ToProjectResponse = mockMvc.perform(
+            post("/projects/$projectId/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMemberRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.username").value(user3.username))
+            .andExpect(jsonPath("$.firstName").value(user3.firstName))
+            .andExpect(jsonPath("$.middleName").value(user3.middleName))
+            .andExpect(jsonPath("$.lastName").value(user3.lastName))
+            .andReturn()
+
+        val memberId3 = objectMapper
+            .readTree(addMember3ToProjectResponse.response.contentAsString)["memberId"].asText()
+
+        // Назначаем третьего юзера на созданную задачу исполнителем
+
+        val addMemberToTaskRequest = AddMemberToTaskRequest(memberId = UUID.fromString(memberId3))
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/assignees")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(addMemberToTaskRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.memberId").value(memberId3))
+            .andReturn()
+    }
+
+    @Test
+    @DisplayName("В созданный проект добавляем новый статус для задач")
+    fun `create new status in project`() {
+        val createStatusRequest = CreateStatusRequest(
+            name = "New Status",
+            color = "#123456"
+        )
+
+        mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.statusCreatedEvent.statusName").value("New Status"))
+            .andExpect(jsonPath("$.statusCreatedEvent.color").value("#123456"))
+
+            .andExpect(jsonPath("$.possibleStatusesUpdatedEvent.statuses").isArray)
+            .andReturn()
+    }
+
+    @Test
+    @DisplayName("В созданный проект добавляем новую задачу, новый статус, и меняем статус задачи на новый")
+    fun `update status task`() {
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "SUPER TASK",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+        val createStatusRequest = CreateStatusRequest(
+            name = "STATUS VAMOS",
+            color = "#295233"
+        )
+
+        val statusCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        val newStatusId = objectMapper
+            .readTree(statusCreatedEvent.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
+
+        val updateTaskStatusRequest = UpdateTaskStatusRequest(
+            statusId = UUID.fromString(newStatusId)
+        )
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateTaskStatusRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.taskId").value(taskId))
+            .andExpect(jsonPath("$.statusId").value(newStatusId))
+            .andReturn()
+    }
+
+    @Test
+    @DisplayName("Создать задачу в проекте и изменить ее название")
+    fun `update task name`() {
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "SUPER TASK",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+        val updateTaskNameRequest = UpdateTaskNameRequest(
+            title = "NEW TASK NAME"
+        )
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/name")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateTaskNameRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.taskId").value(taskId))
+            .andExpect(jsonPath("$.title").value("NEW TASK NAME"))
+            .andReturn()
+    }
+
+    @Test
+    @DisplayName("Создать статус в проекте и удалить его")
+    fun `delete status`() {
+        val createStatusRequest = CreateStatusRequest(
+            name = "New Status",
+            color = "#123456"
+        )
+
+        val statusCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        val statusId = objectMapper
+            .readTree(statusCreatedEvent.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
+
+        mockMvc.perform(
+            delete("/projects/$projectId/statuses/$statusId")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.statusDeletedEvent.statusId").value(statusId))
+            .andReturn()
+    }
+
+    @Test
+    @DisplayName("""
+        1. Создать в проекте задачу
+        2. Создать статус в проекте
+        3. Присвоить задаче новый статус
+        4. Попробовать удалить новый статус - поймать 400
+    """)
+    fun `delete status with assigned tasks`() {
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "SUPER TASK NEW",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+        val createStatusRequest = CreateStatusRequest(
+            name = "STATUS VAMOS RUSSIA",
+            color = "#295233"
+        )
+
+        val statusCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        val newStatusId = objectMapper
+            .readTree(statusCreatedEvent.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
+
+        val updateTaskStatusRequest = UpdateTaskStatusRequest(
+            statusId = UUID.fromString(newStatusId)
+        )
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateTaskStatusRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.taskId").value(taskId))
+            .andExpect(jsonPath("$.statusId").value(newStatusId))
+            .andReturn()
+
+        mockMvc.perform(
+            delete("/projects/$projectId/statuses/$newStatusId")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isBadRequest)
     }
 
     companion object {
@@ -147,9 +332,20 @@ class ProjectTest {
             password = "test2",
         )
 
+        val user3 = CreateUserRequest(
+            username = "USEROCHEK",
+            firstName = "3",
+            middleName = "3",
+            lastName = "3",
+            password = "ewrwiehf",
+        )
+
+        lateinit var projectId: UUID
+        lateinit var statusId: UUID
+
         @BeforeAll
         @JvmStatic
-        fun createUsers(
+        fun setup(
             @Autowired mockMvc: MockMvc,
             @Autowired objectMapper: ObjectMapper
         ) {
@@ -175,6 +371,52 @@ class ProjectTest {
                     .content(
                         objectMapper.writeValueAsString(user2)
                     )
+            )
+
+            // create user 3
+            mockMvc.perform(
+                post("/users/signup")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(user3)
+                    )
+            )
+
+            // Создание проекта
+            val createProjectRequest = CreateProjectRequest(
+                title = "New Project",
+                username = user1.username
+            )
+
+            val projectCreatedResponse = mockMvc.perform(
+                post("/projects")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(createProjectRequest))
+            )
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.projectCreatedEvent.title").value("New Project"))
+                .andExpect(jsonPath("$.projectCreatedEvent.name").value(PROJECT_CREATED_EVENT))
+                .andExpect(jsonPath("$.projectCreatedEvent.version").value(1))
+
+                .andExpect(jsonPath("$.memberCreatedEvent.username").value("vamos"))
+                .andExpect(jsonPath("$.memberCreatedEvent.firstName").value("Kylian"))
+                .andExpect(jsonPath("$.memberCreatedEvent.middleName").value("Mbappe"))
+                .andExpect(jsonPath("$.memberCreatedEvent.lastName").value("Petrovich"))
+                .andExpect(jsonPath("$.memberCreatedEvent.projectId").isNotEmpty)
+
+                .andExpect(jsonPath("$.statusCreatedEvent.color").value(DEFAULT_STATUS_COLOR))
+                .andExpect(jsonPath("$.statusCreatedEvent.statusName").value(DEFAULT_STATUS_NAME))
+                .andReturn()
+
+            projectId = UUID.fromString(
+                objectMapper
+                    .readTree(projectCreatedResponse.response.contentAsString)["projectCreatedEvent"]["projectId"].asText()
+            )
+
+            statusId = UUID.fromString(
+                objectMapper
+                    .readTree(projectCreatedResponse.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
             )
         }
     }

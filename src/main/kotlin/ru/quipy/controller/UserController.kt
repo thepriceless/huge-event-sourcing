@@ -1,5 +1,6 @@
 package ru.quipy.controller
 
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -21,13 +22,17 @@ class UserController(
     @PostMapping("/signup")
     fun createUser(
         @RequestBody request: CreateUserRequest
-    ): UserCreatedEvent = userService.create {
-        it.createUser(
-            username = request.username,
-            firstName = request.firstName,
-            middleName = request.middleName,
-            lastName = request.lastName,
-            password = request.password,
-        )
+    ): ResponseEntity<UserCreatedEvent> {
+        val userCreatedEvent = userService.create {
+            it.createUser(
+                username = request.username,
+                firstName = request.firstName,
+                middleName = request.middleName,
+                lastName = request.lastName,
+                password = request.password,
+            )
+        }
+
+        return ResponseEntity.ok(userCreatedEvent)
     }
 }
