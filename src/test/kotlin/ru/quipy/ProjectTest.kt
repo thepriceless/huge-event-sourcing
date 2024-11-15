@@ -562,24 +562,14 @@ class ProjectTest {
         )
             .andExpect(status().isOk)
 
+        // второй раз получаем 400
         mockMvc.perform(
             post("/projects/$projectId/$taskId/assignees")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(AddMemberToTaskRequest(member2Id)))
         )
-            .andExpect(status().isOk)
-
-        //проверим не дублирование мембера
-        val projectResponse = mockMvc.perform(
-            get("/{projectId}/{taskId}")
-                .contentType(MediaType.APPLICATION_JSON)
-        ).andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.assignees.length()").value(1))
-
+            .andExpect(status().isBadRequest)
     }
-
-
 
     companion object {
 

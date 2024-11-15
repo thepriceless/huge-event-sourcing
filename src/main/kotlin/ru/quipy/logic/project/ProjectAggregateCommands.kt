@@ -34,6 +34,8 @@ fun ProjectAggregateState.assignMemberToTask(
     memberId: UUID,
 ): MemberAssignedEvent {
     require(members.any { it.id == memberId }) { "Member doesn't exist" }
+    val targetTask = tasks.first { it.id == taskId }
+    require(targetTask.assignees.none { it == memberId }) { "Member is already assigned" }
 
     return MemberAssignedEvent(
         taskId = taskId,
