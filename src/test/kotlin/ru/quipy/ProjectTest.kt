@@ -521,6 +521,64 @@ class ProjectTest {
             .andExpect(status().isBadRequest)
     }
 
+    @Test
+    fun `x2 assign member to task`() {
+        //создаём задачу
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "New Task2",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+        //добавляем мембера
+        val createMemberRequest = AddMemberToProjectRequest(username = user2.username)
+
+        val memberCreated = mockMvc.perform(
+            post("/projects/$projectId/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMemberRequest))
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val member2Id = UUID.fromString(objectMapper
+            .readTree(memberCreated.response.contentAsString)["memberId"].asText())
+
+        //назначаем его на задачу дважды
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/assignees")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(AddMemberToTaskRequest(member2Id)))
+        )
+            .andExpect(status().isOk)
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/assignees")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(AddMemberToTaskRequest(member2Id)))
+        )
+            .andExpect(status().isOk)
+
+        //проверим не дублирование мембера
+        val projectResponse = mockMvc.perform(
+            get("/{projectId}/{taskId}")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.assignees.length()").value(1))
+
+    }
+
 
 
     companion object {
