@@ -360,10 +360,10 @@ class ProjectTest {
         ).andReturn()
 
         val statusId1 = UUID.fromString(objectMapper
-            .readTree(statusCreatedEvent1.response.contentAsString)["statusId"].asText())
+            .readTree(statusCreatedEvent1.response.contentAsString)["statusCreatedEvent"]["statusId"].asText())
 
         val statusId2 = UUID.fromString(objectMapper
-            .readTree(statusCreatedEvent2.response.contentAsString)["statusId"].asText())
+            .readTree(statusCreatedEvent2.response.contentAsString)["statusCreatedEvent"]["statusId"].asText())
 
         //проверим порядок
         val projectResponse = mockMvc.perform(
@@ -425,10 +425,10 @@ class ProjectTest {
         ).andReturn()
 
         val statusId1 = UUID.fromString(objectMapper
-            .readTree(statusCreatedEvent1.response.contentAsString)["statusId"].asText())
+            .readTree(statusCreatedEvent1.response.contentAsString)["statusCreatedEvent"]["statusId"].asText())
 
         val statusId2 = UUID.fromString(objectMapper
-            .readTree(statusCreatedEvent2.response.contentAsString)["statusId"].asText())
+            .readTree(statusCreatedEvent2.response.contentAsString)["statusCreatedEvent"]["statusId"].asText())
 
         //удалим статус 0
         mockMvc.perform(
