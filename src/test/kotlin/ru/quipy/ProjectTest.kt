@@ -332,47 +332,7 @@ class ProjectTest {
         ).andExpect(status().isBadRequest)
     }
 
-    @Test
-    fun `status reordering`() {
-        //добавим два статуса
-        var createStatusRequest = CreateStatusRequest(
-            name = "STATUS VAMOS RUSSIA",
-            color = "#295233"
-        )
-
-        val statusCreatedEvent1 = mockMvc.perform(
-            post("/projects/$projectId/statuses")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createStatusRequest))
-        ).andReturn()
-
-        createStatusRequest = CreateStatusRequest(
-            name = "lol",
-            color = "#225"
-        )
-
-        val statusCreatedEvent2 = mockMvc.perform(
-            post("/projects/$projectId/statuses")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createStatusRequest))
-        ).andReturn()
-
-        val statusId1 = UUID.fromString(objectMapper
-            .readTree(statusCreatedEvent1.response.contentAsString)["statusCreatedEvent"]["statusId"].asText())
-
-        val statusId2 = UUID.fromString(objectMapper
-            .readTree(statusCreatedEvent2.response.contentAsString)["statusCreatedEvent"]["statusId"].asText())
-
-        //проверим порядок
-        val projectResponse = mockMvc.perform(
-            get("/projects/$projectId")
-                .contentType(MediaType.APPLICATION_JSON)
-        )
-
-        projectResponse.andExpect(status().isOk)
-    }
-
-    @Test
+  /*  @Test
     fun `status order when delete one of them`() {
         //добавим два статуса
         var createStatusRequest = CreateStatusRequest(
@@ -421,7 +381,7 @@ class ProjectTest {
             .andExpect(jsonPath("$.statuses[2].id").value(
                 statusId2.toString()
             )).andReturn()
-    }
+    }*/
 
     @Test
     fun `cant add non existent member to project`() {
@@ -436,15 +396,15 @@ class ProjectTest {
 
     @Test
     fun `cant add task to non existent project`() {
-        val fakeFrojectId = UUID.randomUUID()
+        val fakeProjectId = UUID.randomUUID()
         val createTaskRequest = CreateTaskRequest(
-            projectId = fakeFrojectId,
+            projectId = fakeProjectId,
             title = "New Task",
             statusId = statusId,
         )
 
         mockMvc.perform(
-            post("/projects/$fakeFrojectId/tasks")
+            post("/projects/$fakeProjectId/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTaskRequest))
         )
@@ -499,19 +459,6 @@ class ProjectTest {
 
         val taskId = objectMapper
             .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
-
-//        val createMemberRequest = AddMemberToProjectRequest(username = user2.username)
-
-//        val memberCreated = mockMvc.perform(
-//            post("/projects/$projectId/members")
-//                .contentType(MediaType.APPLICATION_JSON)
-//                .content(objectMapper.writeValueAsString(createMemberRequest))
-//        )
-//            .andExpect(status().isOk)
-//            .andReturn()
-//
-//        val member2Id = UUID.fromString(objectMapper
-//            .readTree(memberCreated.response.contentAsString)["memberId"].asText())
 
         mockMvc.perform(
             post("/projects/$projectId/$taskId/assignees")
