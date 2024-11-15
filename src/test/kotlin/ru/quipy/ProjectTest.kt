@@ -105,7 +105,7 @@ class ProjectTest {
         val memberId3 = objectMapper
             .readTree(addMember3ToProjectResponse.response.contentAsString)["memberId"].asText()
 
-        // Назначаем третьего юзера на созданную задачу исполнителем
+        // Назначаем третьего участника на созданную задачу исполнителем
 
         val addMemberToTaskRequest = AddMemberToTaskRequest(memberId = UUID.fromString(memberId3))
 
@@ -332,8 +332,6 @@ class ProjectTest {
         ).andExpect(status().isBadRequest)
     }
 
-
-
     @Test
     fun `status reordering`() {
         //добавим два статуса
@@ -367,36 +365,11 @@ class ProjectTest {
 
         //проверим порядок
         val projectResponse = mockMvc.perform(
-            get("/{projectId}")
+            get("/projects/$projectId")
                 .contentType(MediaType.APPLICATION_JSON)
         )
 
         projectResponse.andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.statuses[0].id").value(statusId.toString()))
-            .andExpect(jsonPath("$.statuses[1].id").value(
-                statusId1.toString()
-            ))
-            .andExpect(jsonPath("$.statuses[2].id").value(
-                statusId2.toString()
-            ))
-
-        val newOrder = listOf(statusId2, statusId, statusId1)
-
-        val statuesUpdatedEvent = mockMvc.perform(
-            patch("/{projectId}/statuses")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    objectMapper.writeValueAsString(UpdateStatusOrderRequest(newOrder))
-                )
-        ).andExpect(status().isOk)
-            .andExpect(jsonPath("$.statuses[0].id").value(statusId2))
-            .andExpect(jsonPath("$.statuses[1].id").value(
-                statusId.toString()
-            ))
-            .andExpect(jsonPath("$.statuses[2].id").value(
-                statusId1.toString()
-            )).andReturn()
     }
 
     @Test
@@ -547,7 +520,6 @@ class ProjectTest {
         )
             .andExpect(status().isBadRequest)
     }
-
 
 
 

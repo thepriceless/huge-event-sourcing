@@ -17,6 +17,7 @@ class UserCreatedEvent(
     val middleName: String,
     val lastName: String,
     val password: String,
+    val existingUsername: String?,
 ) : Event<UserAggregate>(
     name = USER_CREATED_EVENT,
     createdAt = System.currentTimeMillis(),

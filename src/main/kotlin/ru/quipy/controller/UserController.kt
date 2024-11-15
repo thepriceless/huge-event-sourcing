@@ -10,7 +10,7 @@ import ru.quipy.api.UserCreatedEvent
 import ru.quipy.controller.model.CreateUserRequest
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.UserAggregateState
-import ru.quipy.logic.project.createUser
+import ru.quipy.logic.user.createUser
 import java.util.*
 
 @RestController
@@ -23,6 +23,8 @@ class UserController(
     fun createUser(
         @RequestBody request: CreateUserRequest
     ): ResponseEntity<UserCreatedEvent> {
+        val existingUser = userService.getState(request.username)
+
         val userCreatedEvent = userService.create {
             it.createUser(
                 username = request.username,
@@ -30,6 +32,7 @@ class UserController(
                 middleName = request.middleName,
                 lastName = request.lastName,
                 password = request.password,
+                existingUsername = existingUser?.username
             )
         }
 
