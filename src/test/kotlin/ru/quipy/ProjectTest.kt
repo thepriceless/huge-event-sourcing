@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -313,6 +312,145 @@ class ProjectTest {
         )
             .andExpect(status().isBadRequest)
     }
+
+    @Test
+    fun `two users with same username are prohibited`() {
+        val userWithSameName = CreateUserRequest(
+            username = "vamos",
+            firstName = "asd",
+            middleName = "Mbaasfasppe",
+            lastName = "asdas",
+            password = "test",
+        )
+
+        mockMvc.perform(
+            post("/users/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(userWithSameName)
+                )
+        ).andExpect(status().isBadRequest)
+    }
+
+
+
+    @Test
+    fun `status reordering`() {
+        //добавим два статуса
+        var createStatusRequest = CreateStatusRequest(
+            name = "STATUS VAMOS RUSSIA",
+            color = "#295233"
+        )
+
+        val statusCreatedEvent1 = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        createStatusRequest = CreateStatusRequest(
+            name = "lol",
+            color = "#225"
+        )
+
+        val statusCreatedEvent2 = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        val statusId1 = UUID.fromString(objectMapper
+            .readTree(statusCreatedEvent1.response.contentAsString)["statusId"].asText())
+
+        val statusId2 = UUID.fromString(objectMapper
+            .readTree(statusCreatedEvent2.response.contentAsString)["statusId"].asText())
+
+        //проверим порядок
+        val projectResponse = mockMvc.perform(
+            get("/{projectId}")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+
+        projectResponse.andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.statuses[0].id").value(statusId.toString()))
+            .andExpect(jsonPath("$.statuses[1].id").value(
+                statusId1.toString()
+            ))
+            .andExpect(jsonPath("$.statuses[2].id").value(
+                statusId2.toString()
+            ))
+
+        val newOrder = listOf(statusId2, statusId, statusId1)
+
+        val statuesUpdatedEvent = mockMvc.perform(
+            patch("/{projectId}/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(UpdateStatusOrderRequest(newOrder))
+                )
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.statuses[0].id").value(statusId2))
+            .andExpect(jsonPath("$.statuses[1].id").value(
+                statusId.toString()
+            ))
+            .andExpect(jsonPath("$.statuses[2].id").value(
+                statusId1.toString()
+            )).andReturn()
+    }
+
+    @Test
+    fun `status order when delete one of them`() {
+        //добавим два статуса
+        var createStatusRequest = CreateStatusRequest(
+            name = "STATUS VAMOS RUSSIA",
+            color = "#295233"
+        )
+
+        val statusCreatedEvent1 = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        createStatusRequest = CreateStatusRequest(
+            name = "lol",
+            color = "#225"
+        )
+
+        val statusCreatedEvent2 = mockMvc.perform(
+            post("/projects/$projectId/statuses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createStatusRequest))
+        ).andReturn()
+
+        val statusId1 = UUID.fromString(objectMapper
+            .readTree(statusCreatedEvent1.response.contentAsString)["statusId"].asText())
+
+        val statusId2 = UUID.fromString(objectMapper
+            .readTree(statusCreatedEvent2.response.contentAsString)["statusId"].asText())
+
+        //удалим статус 0
+        mockMvc.perform(
+            delete("/projects/$projectId/statuses/$statusId")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+
+        //проверим порядок оставшихся двух и что их 2
+        val projectResponse = mockMvc.perform(
+            get("/{projectId}")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.statuses.length()").value(2))
+            .andExpect(jsonPath("$.statuses[1].id").value(
+                statusId1.toString()
+            ))
+            .andExpect(jsonPath("$.statuses[2].id").value(
+                statusId2.toString()
+            )).andReturn()
+    }
+
+
 
     companion object {
 
