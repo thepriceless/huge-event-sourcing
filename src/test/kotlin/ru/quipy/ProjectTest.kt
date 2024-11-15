@@ -450,6 +450,105 @@ class ProjectTest {
             )).andReturn()
     }
 
+    @Test
+    fun `cant add non existent member to project`() {
+        mockMvc.perform(
+            post("/projects/$projectId/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(AddMemberToProjectRequest("non exist user name")))
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+
+    @Test
+    fun `cant add task to non existent project`() {
+        val fakeFrojectId = UUID.randomUUID()
+        val createTaskRequest = CreateTaskRequest(
+            projectId = fakeFrojectId,
+            title = "New Task",
+            statusId = statusId,
+        )
+
+        mockMvc.perform(
+            post("/projects/$fakeFrojectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `cant update task status with non existent statusId`() {
+        //создаём задачу
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "New Task",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val updateTaskStatusRequest = UpdateTaskStatusRequest(
+            statusId = UUID.randomUUID()
+        )
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateTaskStatusRequest))
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `cant assign non existent member to task`() {
+        //создаём задачу
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "New Task",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        ).andReturn()
+
+        val taskId = objectMapper
+            .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
+
+//        val createMemberRequest = AddMemberToProjectRequest(username = user2.username)
+
+//        val memberCreated = mockMvc.perform(
+//            post("/projects/$projectId/members")
+//                .contentType(MediaType.APPLICATION_JSON)
+//                .content(objectMapper.writeValueAsString(createMemberRequest))
+//        )
+//            .andExpect(status().isOk)
+//            .andReturn()
+//
+//        val member2Id = UUID.fromString(objectMapper
+//            .readTree(memberCreated.response.contentAsString)["memberId"].asText())
+
+        mockMvc.perform(
+            post("/projects/$projectId/$taskId/assignees")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(AddMemberToTaskRequest(UUID.randomUUID())))
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+
 
 
     companion object {
