@@ -17,3 +17,10 @@ data class StatusDeletedResponse(
     val possibleStatusesUpdatedEvent: PossibleStatusesUpdatedEvent,
     val statusDeletedEvent: StatusDeletedEvent,
 )
+
+data class UserResponse(
+    val username: String,
+    val firstName: String,
+    val middleName: String,
+    val lastName: String,
+)

@@ -1,15 +1,23 @@
 package ru.quipy.config
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import ru.quipy.api.ProjectAggregate
 import ru.quipy.api.UserAggregate
+import ru.quipy.core.AggregateRegistry
+import ru.quipy.core.BasicAggregateRegistry
 import ru.quipy.core.EventSourcingServiceFactory
+import ru.quipy.core.SeekingForSuitableClassesAggregateRegistry
 import ru.quipy.logic.project.ProjectAggregateState
 import ru.quipy.logic.project.UserAggregateState
+import ru.quipy.mapper.JsonEventMapper
+import ru.quipy.projections.UserProjection
 import ru.quipy.streams.AggregateEventStreamManager
+import ru.quipy.streams.AggregateSubscriptionsManager
 import java.util.*
 import javax.annotation.PostConstruct
 
@@ -44,6 +52,9 @@ class EventSourcingLibConfiguration {
     @Autowired
     private lateinit var eventStreamManager: AggregateEventStreamManager
 
+    @Autowired
+    private lateinit var subscriptionsManager : AggregateSubscriptionsManager
+
     /**
      * Use this object to create/update the aggregate
      */
@@ -53,7 +64,6 @@ class EventSourcingLibConfiguration {
     @Bean
     fun userService() = eventSourcingServiceFactory.create<String, UserAggregate, UserAggregateState>()
 
-    @PostConstruct
     fun init() {
 
         // Demonstrates how you can set up the listeners to the event stream

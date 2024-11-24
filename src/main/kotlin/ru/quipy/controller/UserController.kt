@@ -1,22 +1,21 @@
 package ru.quipy.controller
 
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import ru.quipy.api.UserAggregate
 import ru.quipy.api.UserCreatedEvent
 import ru.quipy.controller.model.CreateUserRequest
+import ru.quipy.controller.model.UserResponse
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.UserAggregateState
 import ru.quipy.logic.user.createUser
-import java.util.*
+import ru.quipy.projections.UserProjection
 
 @RestController
 @RequestMapping("/users")
 class UserController(
-    val userService: EventSourcingService<String, UserAggregate, UserAggregateState>
+    val userService: EventSourcingService<String, UserAggregate, UserAggregateState>,
+    val userProjection: UserProjection
 ) {
 
     @PostMapping("/signup")
@@ -38,4 +37,20 @@ class UserController(
 
         return ResponseEntity.ok(userCreatedEvent)
     }
+
+    @GetMapping("/{username}")
+    fun getUserByID(
+        @PathVariable username: String
+    ): ResponseEntity<UserResponse> {
+        val user = userProjection.getUser(username) ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(
+            UserResponse(
+                username = user.username,
+                firstName = user.firstName,
+                middleName = user.middleName,
+                lastName = user.lastName,
+            )
+        )
+    }
+
 }
