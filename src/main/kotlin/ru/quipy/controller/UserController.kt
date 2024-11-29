@@ -38,9 +38,24 @@ class UserController(
         return ResponseEntity.ok(userCreatedEvent)
     }
 
-    @GetMapping("/{username}")
+    @GetMapping("/all")
+    fun getAllUsers(): ResponseEntity<List<UserResponse>> {
+        val users = userProjection.getAllUsers()
+        return ResponseEntity.ok(
+            users.map {
+                UserResponse(
+                    username = it.username,
+                    firstName = it.firstName,
+                    middleName = it.middleName,
+                    lastName = it.lastName,
+                )
+            }
+        )
+    }
+
+    @GetMapping("/get")
     fun getUserByID(
-        @PathVariable username: String
+        @RequestParam("username") username: String
     ): ResponseEntity<UserResponse> {
         val user = userProjection.getUser(username) ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(

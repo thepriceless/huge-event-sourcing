@@ -316,7 +316,7 @@ class ProjectTest {
     @Test
     fun `two users with same username are prohibited`() {
         val userWithSameName = CreateUserRequest(
-            username = "vamos",
+            username = user1.username,
             firstName = "asd",
             middleName = "Mbaasfasppe",
             lastName = "asdas",
@@ -520,38 +520,144 @@ class ProjectTest {
 
     @Test
     fun `can get user`() {
-        val user = CreateUserRequest(
-            username = java.util.UUID.randomUUID().toString(),
-            firstName = "Kylian",
-            middleName = "Mbappe",
-            lastName = "Petrovich",
-            password = "test",
-        )
-
-        Thread.sleep(10_000)
-
         mockMvc.perform(
-            get("/users/${user.username}")
+            get("/users/get?username=${user1.username}")
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value(user.username))
-            .andExpect(jsonPath("$.firstName").value(user.firstName))
-            .andExpect(jsonPath("$.middleName").value(user.middleName))
-            .andExpect(jsonPath("$.lastName").value(user.lastName))
+            .andExpect(jsonPath("$.username").value(user1.username))
+            .andExpect(jsonPath("$.firstName").value(user1.firstName))
+            .andExpect(jsonPath("$.middleName").value(user1.middleName))
+            .andExpect(jsonPath("$.lastName").value(user1.lastName))
     }
 
     @Test
     fun `cant get non existent user`() {
         mockMvc.perform(
-            get("/users/${user3.username}")
+            get("/users/get?username=non_existent_username")
         )
             .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `get all users`() {
+        mockMvc.perform(
+            get("/users/all")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(3))
+    }
+
+    @Test
+    fun `can get project`() {
+        mockMvc.perform(
+            get("/projects/$projectId")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(projectId.toString()))
+    }
+
+    @Test
+    fun `cant get non existent project` () {
+        mockMvc.perform(
+            get("/projects/${UUID.randomUUID()}")
+        )
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `get all projects` () {
+        mockMvc.perform(
+            get("/projects/all")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(1))
+    }
+
+    @Test
+    fun `get project by user` () {
+        mockMvc.perform(
+            get("/projects/users/${user1.username}")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(projectId.toString()))
+    }
+
+    @Test
+    fun `get project by user not found` () {
+        mockMvc.perform(
+            get("/projects/users/non_existent_user")
+        )
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `get tasks by project` () {
+        val projectCreatedResponse = mockMvc.perform(
+            post("/projects")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(CreateProjectRequest(
+                    title = "Get tasks project",
+                    username = user1.username
+                )))
+        ).andReturn()
+
+        val id = UUID.fromString(
+            objectMapper
+                .readTree(projectCreatedResponse.response.contentAsString)["projectCreatedEvent"]["projectId"].asText()
+        )
+
+        mockMvc.perform(
+            get("/projects/$id/tasks")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(0))
+
+        mockMvc.perform(
+            post("/projects/$id/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(CreateTaskRequest(
+                    title = "Get tasks task",
+                    statusId = statusId,
+                    assignees = listOf(UUID.fromString(user1.username)),
+                    projectId = id
+                ))
+            )
+        )
+
+        Thread.sleep(3000)
+
+        mockMvc.perform(
+            get("/projects/$id/tasks")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(1))
+    }
+
+    @Test
+    fun `get tasks by project not found` () {
+        mockMvc.perform(
+            get("/projects/fake_project/tasks")
+        )
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `get all tasks` () {
+        mockMvc.perform(
+            get("/projects/tasks/all")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
     }
 
     companion object {
 
         val user1 = CreateUserRequest(
-            username = "vamos",
+            username = UUID.randomUUID().toString(),
             firstName = "Kylian",
             middleName = "Mbappe",
             lastName = "Petrovich",
@@ -559,7 +665,7 @@ class ProjectTest {
         )
 
         val user2 = CreateUserRequest(
-            username = "paco",
+            username = UUID.randomUUID().toString(),
             firstName = "Yuri",
             middleName = "Zhirkov",
             lastName = "Valentinovich",
@@ -567,7 +673,7 @@ class ProjectTest {
         )
 
         val user3 = CreateUserRequest(
-            username = "USEROCHEK",
+            username = UUID.randomUUID().toString(),
             firstName = "3",
             middleName = "3",
             lastName = "3",
@@ -577,81 +683,83 @@ class ProjectTest {
         lateinit var projectId: UUID
         lateinit var statusId: UUID
 
-//        @BeforeAll
-//        @JvmStatic
-//        fun setup(
-//            @Autowired mockMvc: MockMvc,
-//            @Autowired objectMapper: ObjectMapper
-//        ) {
-//            // create user 1
-//            mockMvc.perform(
-//                post("/users/signup")
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .content(
-//                        objectMapper.writeValueAsString(user1)
-//                    )
-//            )
-//                .andExpect(status().isOk)
-//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(jsonPath("$.username").value("vamos"))
-//                .andExpect(jsonPath("$.firstName").value("Kylian"))
-//                .andExpect(jsonPath("$.middleName").value("Mbappe"))
-//                .andExpect(jsonPath("$.lastName").value("Petrovich"))
-//
-//            // create user 2
-//            mockMvc.perform(
-//                post("/users/signup")
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .content(
-//                        objectMapper.writeValueAsString(user2)
-//                    )
-//            )
-//
-//            // create user 3
-//            mockMvc.perform(
-//                post("/users/signup")
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .content(
-//                        objectMapper.writeValueAsString(user3)
-//                    )
-//            )
-//
-//            // Создание проекта
-//            val createProjectRequest = CreateProjectRequest(
-//                title = "New Project",
-//                username = user1.username
-//            )
-//
-//            val projectCreatedResponse = mockMvc.perform(
-//                post("/projects")
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .content(objectMapper.writeValueAsString(createProjectRequest))
-//            )
-//                .andExpect(status().isOk)
-//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(jsonPath("$.projectCreatedEvent.title").value("New Project"))
-//                .andExpect(jsonPath("$.projectCreatedEvent.name").value(PROJECT_CREATED_EVENT))
-//                .andExpect(jsonPath("$.projectCreatedEvent.version").value(1))
-//
-//                .andExpect(jsonPath("$.memberCreatedEvent.username").value("vamos"))
-//                .andExpect(jsonPath("$.memberCreatedEvent.firstName").value("Kylian"))
-//                .andExpect(jsonPath("$.memberCreatedEvent.middleName").value("Mbappe"))
-//                .andExpect(jsonPath("$.memberCreatedEvent.lastName").value("Petrovich"))
-//                .andExpect(jsonPath("$.memberCreatedEvent.projectId").isNotEmpty)
-//
-//                .andExpect(jsonPath("$.statusCreatedEvent.color").value(DEFAULT_STATUS_COLOR))
-//                .andExpect(jsonPath("$.statusCreatedEvent.statusName").value(DEFAULT_STATUS_NAME))
-//                .andReturn()
-//
-//            projectId = UUID.fromString(
-//                objectMapper
-//                    .readTree(projectCreatedResponse.response.contentAsString)["projectCreatedEvent"]["projectId"].asText()
-//            )
-//
-//            statusId = UUID.fromString(
-//                objectMapper
-//                    .readTree(projectCreatedResponse.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
-//            )
-//        }
+        @BeforeAll
+        @JvmStatic
+        fun setup(
+            @Autowired mockMvc: MockMvc,
+            @Autowired objectMapper: ObjectMapper
+        ) {
+            Thread.sleep(5000)
+
+            // create user 1
+            mockMvc.perform(
+                post("/users/signup")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(user1)
+                    )
+            )
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.username").value(user1.username))
+                .andExpect(jsonPath("$.firstName").value(user1.firstName))
+                .andExpect(jsonPath("$.middleName").value(user1.middleName))
+                .andExpect(jsonPath("$.lastName").value(user1.lastName))
+
+            // create user 2
+            mockMvc.perform(
+                post("/users/signup")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(user2)
+                    )
+            )
+
+            // create user 3
+            mockMvc.perform(
+                post("/users/signup")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(user3)
+                    )
+            )
+
+            // Создание проекта
+            val createProjectRequest = CreateProjectRequest(
+                title = "New Project",
+                username = user1.username
+            )
+
+            val projectCreatedResponse = mockMvc.perform(
+                post("/projects")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(createProjectRequest))
+            )
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.projectCreatedEvent.title").value("New Project"))
+                .andExpect(jsonPath("$.projectCreatedEvent.name").value(PROJECT_CREATED_EVENT))
+                .andExpect(jsonPath("$.projectCreatedEvent.version").value(1))
+
+                .andExpect(jsonPath("$.memberCreatedEvent.username").value(user1.username))
+                .andExpect(jsonPath("$.memberCreatedEvent.firstName").value(user1.firstName))
+                .andExpect(jsonPath("$.memberCreatedEvent.middleName").value(user1.middleName))
+                .andExpect(jsonPath("$.memberCreatedEvent.lastName").value(user1.lastName))
+                .andExpect(jsonPath("$.memberCreatedEvent.projectId").isNotEmpty)
+
+                .andExpect(jsonPath("$.statusCreatedEvent.color").value(DEFAULT_STATUS_COLOR))
+                .andExpect(jsonPath("$.statusCreatedEvent.statusName").value(DEFAULT_STATUS_NAME))
+                .andReturn()
+
+            projectId = UUID.fromString(
+                objectMapper
+                    .readTree(projectCreatedResponse.response.contentAsString)["projectCreatedEvent"]["projectId"].asText()
+            )
+
+            statusId = UUID.fromString(
+                objectMapper
+                    .readTree(projectCreatedResponse.response.contentAsString)["statusCreatedEvent"]["statusId"].asText()
+            )
+        }
     }
 }

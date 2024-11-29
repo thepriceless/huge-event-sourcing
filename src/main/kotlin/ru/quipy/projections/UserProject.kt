@@ -18,9 +18,9 @@ import javax.persistence.Id
 
 @Service
 @AggregateSubscriber(
-    aggregateClass = UserAggregate::class, subscriberName = "user-projection"
+    aggregateClass = UserAggregate::class, subscriberName = "user-project-projection"
 )
-class UserProjection (
+class UserProjectProjection (
     val userRepository: UserRepository,
     val subscriptionsManager: AggregateSubscriptionsManager,
 ){
@@ -28,7 +28,7 @@ class UserProjection (
 
     @PostConstruct
     fun init() {
-        subscriptionsManager.createSubscriber(UserAggregate::class, "user:user-projection") {
+        subscriptionsManager.createSubscriber(UserAggregate::class, "user:user-project-projection") {
             `when`(UserCreatedEvent::class) { event ->
                 logger.info("User created: {}", event.username)
             }
@@ -48,31 +48,13 @@ class UserProjection (
         }
     }
 
-    fun getUser(username: String): UserEntity? {
-        logger.info("Get user ${username} request")
-        return userRepository.findById(username).orElse(null)
-    }
-
-    fun getAllUsers(): List<UserEntity> {
-        logger.info("Get all users request")
-        return userRepository.findAll()
-    }
-
-    @SubscribeEvent
-    fun userCreatedEventSubscriber(event: UserCreatedEvent) {
-        logger.info("User created.\nId: ${event.username}")
+    fun getProjectUsers(projectId: String): List<UserEntity?> {
+        logger.info("Get users for project  ${projectId} request")
+        return listOf()
     }
 }
 
 @Entity
-data class UserEntity(
-    @Id
-    val username: String = "",
-    val firstName: String = "",
-    val middleName: String = "",
-    val lastName: String = "",
-    val password: String = "",
-)
+class MemberUser {
 
-@Repository
-interface UserRepository : JpaRepository<UserEntity, String>
+}

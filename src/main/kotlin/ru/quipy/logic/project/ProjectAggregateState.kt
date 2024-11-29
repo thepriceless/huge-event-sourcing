@@ -8,9 +8,9 @@ import java.util.*
 class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     lateinit var projectId: UUID
     lateinit var title: String
-    var members = mutableListOf<MemberEntity>()
-    var tasks = mutableSetOf<TaskEntity>()
-    var statuses = mutableListOf<StatusEntity>()
+    var members = mutableListOf<MemberDto>()
+    var tasks = mutableSetOf<TaskDto>()
+    var statuses = mutableListOf<StatusDto>()
 
     override fun getId() = projectId
 
@@ -35,11 +35,11 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     @StateTransitionFunc
     fun taskCreatedApply(event: TaskCreatedEvent) {
         tasks.add(
-            TaskEntity(
+            TaskDto(
                 id = event.taskId,
                 projectId = event.projectId,
                 title = event.title,
-                status = event.statusId,
+                statusId = event.statusId,
                 assignees = event.assignees,
             )
         )
@@ -57,7 +57,7 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     fun taskStatusUpdatedApply(event: TaskStatusUpdatedEvent) {
         tasks
             .first { it.id == event.taskId }
-            .status = event.statusId
+            .statusId = event.statusId
     }
 
     @StateTransitionFunc
@@ -70,7 +70,7 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     @StateTransitionFunc
     fun statusCreatedApply(event: StatusCreatedEvent) {
         statuses.add(
-            StatusEntity(
+            StatusDto(
                 id = event.statusId,
                 projectId = event.projectId,
                 name = event.statusName,
@@ -82,7 +82,7 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     @StateTransitionFunc
     fun memberCreatedApply(event: MemberCreatedEvent) {
         members.add(
-            MemberEntity(
+            MemberDto(
                 id = event.memberId,
                 username = event.username,
                 firstName = event.firstName,
@@ -98,22 +98,27 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     }
 }
 
-data class TaskEntity(
+data class ProjectDto (
+    val id: UUID = UUID.randomUUID(),
+    val title: String,
+)
+
+data class TaskDto(
     val id: UUID = UUID.randomUUID(),
     val projectId: UUID,
     var title: String,
-    var status: UUID,
+    var statusId: UUID,
     val assignees: MutableList<UUID>
 )
 
-data class StatusEntity(
+data class StatusDto(
     val id: UUID = UUID.randomUUID(),
     val projectId: UUID,
     val name: String,
     val color: String
 )
 
-data class MemberEntity(
+data class MemberDto(
     val id: UUID = UUID.randomUUID(),
     val username: String,
     val firstName: String,

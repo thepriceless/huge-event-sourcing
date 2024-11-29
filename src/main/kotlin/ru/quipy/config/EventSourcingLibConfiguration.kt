@@ -64,6 +64,7 @@ class EventSourcingLibConfiguration {
     @Bean
     fun userService() = eventSourcingServiceFactory.create<String, UserAggregate, UserAggregateState>()
 
+    @PostConstruct
     fun init() {
 
         // Demonstrates how you can set up the listeners to the event stream
