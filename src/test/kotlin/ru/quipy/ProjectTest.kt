@@ -672,7 +672,7 @@ class ProjectTest {
             .contentAsString
 
         val tasks: List<TaskDto> = objectMapper.readValue(statuses, object : TypeReference<List<TaskDto>>() {})
-        println(tasks.size)
+
         assert(tasks.size == 8)
     }
 
@@ -685,6 +685,41 @@ class ProjectTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$.length()").value(3))
+    }
+
+    @Test
+    @Order(Int.MAX_VALUE)
+    fun `get tasks by id`() {
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "New Tasocka",
+            statusId = statusId,
+        )
+
+        val taskCreatedEvent = mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+
+        )
+            .andReturn()
+            .response
+            .contentAsString
+
+        val taskId = objectMapper.readTree(taskCreatedEvent)["taskId"].asText()
+
+        Thread.sleep(5000)
+
+        val tasksString = mockMvc.perform(
+            get("/projects/$projectId/tasks/$taskId")
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response.contentAsString
+
+        val tasks: TaskDto = objectMapper.readValue(tasksString, object : TypeReference<TaskDto>() {})
+
+        assert(tasks.title == "New Tasocka")
     }
 
     companion object {
