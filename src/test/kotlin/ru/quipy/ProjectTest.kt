@@ -3,9 +3,7 @@ package ru.quipy
 import com.fasterxml.jackson.core.type.TypeReference
 import org.hamcrest.Matchers.equalToIgnoringCase
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -22,6 +20,7 @@ import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class ProjectTest {
 
     @Autowired
@@ -568,13 +567,14 @@ class ProjectTest {
     }
 
     @Test
+    @Order(Int.MAX_VALUE)
     fun `get all projects` () {
         mockMvc.perform(
             get("/projects/all")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$.length()").value(2))
     }
 
     @Test
@@ -595,6 +595,7 @@ class ProjectTest {
     }
 
     @Test
+    @Order(Int.MAX_VALUE-1)
     fun `get tasks by project` () {
         val projectCreatedResponse = mockMvc.perform(
             post("/projects")
@@ -609,6 +610,8 @@ class ProjectTest {
             objectMapper
                 .readTree(projectCreatedResponse.response.contentAsString)["projectCreatedEvent"]["projectId"].asText()
         )
+
+        Thread.sleep(4000)
 
         mockMvc.perform(
             get("/projects/$id/tasks")
@@ -657,20 +660,9 @@ class ProjectTest {
     }
 
     @Test
+    @Order(Int.MAX_VALUE-2)
     fun `get tasks by status id`() {
-        val createTaskRequest = CreateTaskRequest(
-            projectId = projectId,
-            title = "New Task",
-            statusId = statusId,
-        )
-
-        mockMvc.perform(
-            post("/projects/$projectId/tasks")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createTaskRequest))
-        )
-            .andExpect(status().isOk)
-
+        Thread.sleep(3000)
         val statuses = mockMvc.perform(
             get("/projects/${projectId}/tasks/by_status?statusId=${statusId}")
         )
@@ -680,10 +672,19 @@ class ProjectTest {
             .contentAsString
 
         val tasks: List<TaskDto> = objectMapper.readValue(statuses, object : TypeReference<List<TaskDto>>() {})
-
         println(tasks.size)
+        assert(tasks.size == 8)
+    }
 
-        assert(tasks.size == 1)
+    @Test
+    fun `get users by project` () {
+        Thread.sleep(3000)
+        mockMvc.perform(
+            get("/projects/$projectId/users")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(3))
     }
 
     companion object {

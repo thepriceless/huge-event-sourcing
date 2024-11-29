@@ -8,6 +8,7 @@ import ru.quipy.controller.model.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.*
 import ru.quipy.projections.ProjectProjection
+import ru.quipy.projections.UserProjectProjection
 import ru.quipy.projections.toDto
 import java.util.*
 
@@ -16,6 +17,7 @@ import java.util.*
 class ProjectController(
     val projectService: EventSourcingService<UUID, ProjectAggregate, ProjectAggregateState>,
     val userService: EventSourcingService<String, UserAggregate, UserAggregateState>,
+    val userProjectProjection: UserProjectProjection,
     val projectProjection: ProjectProjection
 ) {
 
@@ -247,7 +249,7 @@ class ProjectController(
         )
     }
 
-    @GetMapping("/{projectId}/tasks/by_status")
+    @GetMapping("/{projectId}/tasks/by_status") //done
     fun getTasksByStatusId(
         @PathVariable projectId: String,
         @RequestParam statusId: String
@@ -284,5 +286,20 @@ class ProjectController(
         return ResponseEntity.ok(
             projectProjection.getStatusesByProjectId(projectId)?.map { it.toDto() } ?: emptyList()
         )
+    }
+
+    @GetMapping("/{projectId}/users") //done
+    fun getUsers(
+        @PathVariable projectId: String
+    ): ResponseEntity<List<UserResponse>> {
+        val users = userProjectProjection.getProjectUsers(projectId).map {
+            UserResponse(
+                username = it.username,
+                firstName = it.firstName,
+                middleName = it.middleName,
+                lastName = it.lastName,
+            )
+        }
+        return ResponseEntity.ok(users)
     }
 }
