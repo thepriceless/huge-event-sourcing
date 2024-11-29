@@ -672,7 +672,6 @@ class ProjectTest {
             .contentAsString
 
         val tasks: List<TaskDto> = objectMapper.readValue(statuses, object : TypeReference<List<TaskDto>>() {})
-
         assert(tasks.size == 8)
     }
 
@@ -720,6 +719,18 @@ class ProjectTest {
         val tasks: TaskDto = objectMapper.readValue(tasksString, object : TypeReference<TaskDto>() {})
 
         assert(tasks.title == "New Tasocka")
+    }
+
+    @Test
+    @Order(Int.MAX_VALUE-3)
+    fun `get statuses by project` () {
+        Thread.sleep(3000)
+        mockMvc.perform(
+            get("/projects/$projectId/statuses")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(4))
     }
 
     companion object {

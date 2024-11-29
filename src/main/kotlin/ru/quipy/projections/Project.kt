@@ -147,7 +147,7 @@ class ProjectProjection (
     }
 
     fun getTaskById(taskId: String): ProjectTaskEntity? {
-        return taskRepository.findById(taskId.toString()).orElse(null)
+        return taskRepository.findById(taskId).orElse(null)
     }
 
     fun getProjectByUsername(username: String): ProjectEntity? {
