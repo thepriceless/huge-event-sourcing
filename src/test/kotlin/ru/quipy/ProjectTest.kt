@@ -1,5 +1,6 @@
 package ru.quipy
 
+import com.fasterxml.jackson.core.type.TypeReference
 import org.hamcrest.Matchers.equalToIgnoringCase
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeAll
@@ -16,6 +17,7 @@ import ru.quipy.api.PROJECT_CREATED_EVENT
 import ru.quipy.controller.model.*
 import ru.quipy.logic.project.ProjectAggregateState.Companion.DEFAULT_STATUS_COLOR
 import ru.quipy.logic.project.ProjectAggregateState.Companion.DEFAULT_STATUS_NAME
+import ru.quipy.logic.project.TaskDto
 import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -652,6 +654,36 @@ class ProjectTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
+    }
+
+    @Test
+    fun `get tasks by status id`() {
+        val createTaskRequest = CreateTaskRequest(
+            projectId = projectId,
+            title = "New Task",
+            statusId = statusId,
+        )
+
+        mockMvc.perform(
+            post("/projects/$projectId/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTaskRequest))
+        )
+            .andExpect(status().isOk)
+
+        val statuses = mockMvc.perform(
+            get("/projects/${projectId}/tasks/by_status?statusId=${statusId}")
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        val tasks: List<TaskDto> = objectMapper.readValue(statuses, object : TypeReference<List<TaskDto>>() {})
+
+        println(tasks.size)
+
+        assert(tasks.size == 1)
     }
 
     companion object {

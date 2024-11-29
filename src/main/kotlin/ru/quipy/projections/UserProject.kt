@@ -53,8 +53,3 @@ class UserProjectProjection (
         return listOf()
     }
 }
-
-@Entity
-class MemberUser {
-
-}
