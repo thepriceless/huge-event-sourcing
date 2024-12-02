@@ -31,6 +31,7 @@ class ProjectCreatedEvent(
 @DomainEvent(name = STATUSES_UPDATED_EVENT)
 class PossibleStatusesUpdatedEvent(
     val statuses: List<UUID>,
+    val projectId: UUID
 ) : Event<ProjectAggregate>(
     name = STATUSES_UPDATED_EVENT,
     createdAt = System.currentTimeMillis(),
@@ -50,6 +51,7 @@ class StatusCreatedEvent(
 @DomainEvent(name = STATUS_DELETED_EVENT)
 class StatusDeletedEvent(
     val statusId: UUID,
+    val projectId: UUID
 ) : Event<ProjectAggregate>(
     name = STATUS_DELETED_EVENT,
     createdAt = System.currentTimeMillis(),
@@ -70,6 +72,7 @@ class TaskCreatedEvent(
 @DomainEvent(name = TASK_STATUS_UPDATED_EVENT)
 class TaskStatusUpdatedEvent(
     val taskId: UUID,
+    val projectId: UUID,
     val statusId: UUID,
 ) : Event<ProjectAggregate>(
     name = TASK_STATUS_UPDATED_EVENT,
@@ -80,6 +83,7 @@ class TaskStatusUpdatedEvent(
 class TaskRenamedEvent(
     val taskId: UUID,
     val title: String,
+    val projectId: UUID,
 ) : Event<ProjectAggregate>(
     name = TASK_RENAMED_EVENT,
     createdAt = System.currentTimeMillis(),
@@ -89,6 +93,7 @@ class TaskRenamedEvent(
 class MemberAssignedEvent(
     val memberId: UUID,
     val taskId: UUID,
+    val projectId: UUID,
 ) : Event<ProjectAggregate>(
     name = MEMBER_ASSIGNED_EVENT,
     createdAt = System.currentTimeMillis(),

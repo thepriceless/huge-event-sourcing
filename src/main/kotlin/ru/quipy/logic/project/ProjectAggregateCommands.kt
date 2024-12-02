@@ -32,6 +32,7 @@ fun ProjectAggregateState.createTask(
 fun ProjectAggregateState.assignMemberToTask(
     taskId: UUID,
     memberId: UUID,
+    projectId: UUID,
 ): MemberAssignedEvent {
     require(members.any { it.id == memberId }) { "Member doesn't exist" }
     val targetTask = tasks.first { it.id == taskId }
@@ -40,21 +41,25 @@ fun ProjectAggregateState.assignMemberToTask(
     return MemberAssignedEvent(
         taskId = taskId,
         memberId = memberId,
+        projectId = projectId,
     )
 }
 
 fun ProjectAggregateState.updateTaskName(
     taskId: UUID,
     title: String,
+    projectId: UUID,
 ): TaskRenamedEvent {
     return TaskRenamedEvent(
         taskId = taskId,
         title = title,
+        projectId = projectId,
     )
 }
 
 fun ProjectAggregateState.updateTaskStatus(
     taskId: UUID,
+    projectId: UUID,
     statusId: UUID,
 ): TaskStatusUpdatedEvent {
     require(statuses.any { it.id == statusId }) { "Status doesn't exist" }
@@ -62,6 +67,7 @@ fun ProjectAggregateState.updateTaskStatus(
     return TaskStatusUpdatedEvent(
         taskId = taskId,
         statusId = statusId,
+        projectId = projectId,
     )
 }
 
@@ -79,19 +85,23 @@ fun ProjectAggregateState.createStatus(
 
 fun ProjectAggregateState.updateStatusOrder(
     orderedStatuses: List<UUID>,
+    projectId: UUID
 ): PossibleStatusesUpdatedEvent {
     return PossibleStatusesUpdatedEvent(
         statuses = orderedStatuses,
+        projectId = projectId,
     )
 }
 
 fun ProjectAggregateState.deleteStatus(
     statusId: UUID,
+    projectId: UUID
 ): StatusDeletedEvent {
-    require(tasks.none { it.status == statusId }) { "Status is assigned to tasks" }
+    require(tasks.none { it.statusId == statusId }) { "Status is assigned to tasks" }
 
     return StatusDeletedEvent(
         statusId = statusId,
+        projectId = projectId,
     )
 }
 
