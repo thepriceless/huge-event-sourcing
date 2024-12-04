@@ -2,48 +2,56 @@ package ru.quipy.controller
 
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import ru.quipy.api.PersonAggregate
+import ru.quipy.api.PersonCreatedEvent
 import ru.quipy.api.UserAggregate
 import ru.quipy.api.UserCreatedEvent
-import ru.quipy.controller.model.CreateUserRequest
-import ru.quipy.controller.model.UserResponse
+import ru.quipy.controller.model.CreatePersonRequest
+import ru.quipy.controller.model.PersonCreatedResponse
+import ru.quipy.controller.model.PersonResponse
 import ru.quipy.core.EventSourcingService
-import ru.quipy.logic.project.UserAggregateState
+import ru.quipy.logic.person.PersonAggregateState
+import ru.quipy.logic.user.UserAggregateState
+import ru.quipy.logic.person.createPerson
 import ru.quipy.logic.user.createUser
-import ru.quipy.projections.UserProjection
+import ru.quipy.projections.PersonProjection
+import java.util.UUID
 
 @RestController
 @RequestMapping("/users")
 class UserController(
-    val userService: EventSourcingService<String, UserAggregate, UserAggregateState>,
-    val userProjection: UserProjection
+    val personService: EventSourcingService<UUID, PersonAggregate, PersonAggregateState>,
+    val userService: EventSourcingService<UUID, UserAggregate, UserAggregateState>,
+    val personProjection: PersonProjection
 ) {
 
     @PostMapping("/signup")
     fun createUser(
-        @RequestBody request: CreateUserRequest
-    ): ResponseEntity<UserCreatedEvent> {
-        val existingUser = userService.getState(request.username)
-
+        @RequestBody request: CreatePersonRequest
+    ): ResponseEntity<PersonCreatedEvent> {
         val userCreatedEvent = userService.create {
-            it.createUser(
+            it.createUser(request.password)
+        }
+
+        val personCreatedEvent = personService.create {
+            it.createPerson(
                 username = request.username,
                 firstName = request.firstName,
                 middleName = request.middleName,
                 lastName = request.lastName,
-                password = request.password,
-                existingUsername = existingUser?.username
+                userId = userCreatedEvent.userId,
             )
         }
 
-        return ResponseEntity.ok(userCreatedEvent)
+        return ResponseEntity.ok(personCreatedEvent)
     }
 
     @GetMapping("/all")
-    fun getAllUsers(): ResponseEntity<List<UserResponse>> {
-        val users = userProjection.getAllUsers()
+    fun getAllPersons(): ResponseEntity<List<PersonResponse>> {
+        val users = personProjection.getAllPersons()
         return ResponseEntity.ok(
             users.map {
-                UserResponse(
+                PersonResponse(
                     username = it.username,
                     firstName = it.firstName,
                     middleName = it.middleName,
@@ -56,10 +64,10 @@ class UserController(
     @GetMapping("/get")
     fun getUserByID(
         @RequestParam("username") username: String
-    ): ResponseEntity<UserResponse> {
-        val user = userProjection.getUser(username) ?: return ResponseEntity.notFound().build()
+    ): ResponseEntity<PersonResponse> {
+        val user = personProjection.getUser(username) ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(
-            UserResponse(
+            PersonResponse(
                 username = user.username,
                 firstName = user.firstName,
                 middleName = user.middleName,
@@ -67,5 +75,4 @@ class UserController(
             )
         )
     }
-
 }

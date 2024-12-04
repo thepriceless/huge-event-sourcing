@@ -8,7 +8,7 @@ import java.util.*
 class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     lateinit var projectId: UUID
     lateinit var title: String
-    var members = mutableListOf<MemberDto>()
+    var members = mutableListOf<PersonDto>()
     var tasks = mutableSetOf<TaskDto>()
     var statuses = mutableListOf<StatusDto>()
 
@@ -46,7 +46,7 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     }
 
     @StateTransitionFunc
-    fun memberAssignedToTaskApply(event: MemberAssignedEvent) {
+    fun memberAssignedToTaskApply(event: PersonAssignedEvent) {
         tasks
             .first { it.id == event.taskId }
             .assignees
@@ -80,10 +80,10 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     }
 
     @StateTransitionFunc
-    fun memberCreatedApply(event: MemberCreatedEvent) {
+    fun personAddedApply(event: PersonAddedToProjectEvent) {
         members.add(
-            MemberDto(
-                id = event.memberId,
+            PersonDto(
+                id = event.personId,
                 username = event.username,
                 firstName = event.firstName,
                 middleName = event.middleName,
@@ -118,7 +118,7 @@ data class StatusDto(
     val color: String
 )
 
-data class MemberDto(
+data class PersonDto(
     val id: UUID = UUID.randomUUID(),
     val username: String,
     val firstName: String,

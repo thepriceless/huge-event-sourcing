@@ -11,9 +11,9 @@ const val STATUS_CREATED_EVENT = "STATUS_CREATED_EVENT"
 const val TASK_CREATED_EVENT = "TASK_CREATED_EVENT"
 const val TASK_STATUS_UPDATED_EVENT = "TASK_STATUS_UPDATED_EVENT"
 const val STATUS_DELETED_EVENT = "STATUS_DELETED_EVENT"
-const val MEMBER_CREATED_EVENT = "USER_CREATED_EVENT"
+const val PERSON_ADDED_TO_PROJECT_EVENT = "PERSON_ADDED_TO_PROJECT_EVENT"
 const val STATUSES_UPDATED_EVENT = "STATUSES_UPDATED_EVENT"
-const val MEMBER_ASSIGNED_EVENT = "MEMBER_ASSIGNED_EVENT"
+const val PERSON_ASSIGNED_EVENT = "PERSON_ASSIGNED_EVENT"
 const val TASK_RENAMED_EVENT = "TASK_RENAMED_EVENT"
 
 @AggregateType(aggregateEventsTableName = "aggregate-project")
@@ -89,25 +89,25 @@ class TaskRenamedEvent(
     createdAt = System.currentTimeMillis(),
 )
 
-@DomainEvent(name = MEMBER_ASSIGNED_EVENT)
-class MemberAssignedEvent(
+@DomainEvent(name = PERSON_ASSIGNED_EVENT)
+class PersonAssignedEvent(
     val memberId: UUID,
     val taskId: UUID,
     val projectId: UUID,
 ) : Event<ProjectAggregate>(
-    name = MEMBER_ASSIGNED_EVENT,
+    name = PERSON_ASSIGNED_EVENT,
     createdAt = System.currentTimeMillis(),
 )
 
-@DomainEvent(name = MEMBER_CREATED_EVENT)
-class MemberCreatedEvent(
+@DomainEvent(name = PERSON_ADDED_TO_PROJECT_EVENT)
+class PersonAddedToProjectEvent(
+    val personId: UUID,
+    val projectId: UUID,
     val username: String,
     val firstName: String,
     val middleName: String,
     val lastName: String,
-    val projectId: UUID,
-    val memberId: UUID,
 ) : Event<ProjectAggregate>(
-    name = MEMBER_CREATED_EVENT,
+    name = PERSON_ADDED_TO_PROJECT_EVENT,
     createdAt = System.currentTimeMillis(),
 )

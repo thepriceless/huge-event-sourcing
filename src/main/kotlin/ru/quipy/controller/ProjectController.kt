@@ -3,10 +3,11 @@ package ru.quipy.controller
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import ru.quipy.api.*
-import ru.quipy.api.UserAggregate
+import ru.quipy.api.PersonAggregate
 import ru.quipy.controller.model.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.*
+import ru.quipy.logic.person.PersonAggregateState
 import ru.quipy.projections.ProjectProjection
 import ru.quipy.projections.UserProjectProjection
 import ru.quipy.projections.toDto
@@ -16,7 +17,7 @@ import java.util.*
 @RequestMapping("/projects")
 class ProjectController(
     val projectService: EventSourcingService<UUID, ProjectAggregate, ProjectAggregateState>,
-    val userService: EventSourcingService<String, UserAggregate, UserAggregateState>,
+    val personService: EventSourcingService<UUID, PersonAggregate, PersonAggregateState>,
     val userProjectProjection: UserProjectProjection,
     val projectProjection: ProjectProjection
 ) {
@@ -26,7 +27,7 @@ class ProjectController(
         val projectCreatedEvent = projectService.create {
             it.createProject(
                 title = request.title,
-                username = request.username,
+                personId = request.personCreatorId,
             )
         }
 
@@ -34,15 +35,16 @@ class ProjectController(
             it.createStatus()
         }
 
-        val memberCreatedEvent = projectService.update(projectCreatedEvent.projectId) {
-            val user = userService.getState(request.username)
+        val personAddedToProjectEvent = projectService.update(projectCreatedEvent.projectId) {
+            val person = personService.getState(request.personCreatorId)
 
-            it.createMember(
+            it.addPerson(
                 projectId = projectCreatedEvent.projectId,
-                username = request.username,
-                firstName = user?.firstName,
-                middleName = user?.middleName,
-                lastName = user?.lastName,
+                personId = person?.personId,
+                username = person?.username,
+                firstName = person?.firstName,
+                middleName = person?.middleName,
+                lastName = person?.lastName,
             )
         }
 
@@ -50,7 +52,7 @@ class ProjectController(
             ProjectCreatedResponse(
                 projectCreatedEvent = projectCreatedEvent,
                 statusCreatedEvent = statusCreatedEvent,
-                memberCreatedEvent = memberCreatedEvent,
+                personAddedToProjectEvent = personAddedToProjectEvent,
             )
         )
     }
@@ -58,17 +60,18 @@ class ProjectController(
     @PostMapping("/{projectId}/members")
     fun addMemberToProject(
         @PathVariable projectId: UUID,
-        @RequestBody request: AddMemberToProjectRequest,
-    ): ResponseEntity<MemberCreatedEvent> {
+        @RequestBody request: AddPersonToProjectRequest,
+    ): ResponseEntity<PersonAddedToProjectEvent> {
         val memberCreatedEvent = projectService.update(projectId) {
-            val user = userService.getState(request.username)
+            val person = personService.getState(request.personToAddId)
 
-            it.createMember(
+            it.addPerson(
                 projectId = projectId,
-                username = request.username,
-                firstName = user?.firstName,
-                middleName = user?.middleName,
-                lastName = user?.lastName,
+                personId = person?.personId,
+                username = person?.username,
+                firstName = person?.firstName,
+                middleName = person?.middleName,
+                lastName = person?.lastName,
             )
         }
 
@@ -97,11 +100,11 @@ class ProjectController(
         @PathVariable projectId: UUID,
         @PathVariable taskId: UUID,
         @RequestBody request: AddMemberToTaskRequest,
-    ): ResponseEntity<MemberAssignedEvent> {
+    ): ResponseEntity<PersonAssignedEvent> {
         val memberAssignedEvent = projectService.update(projectId) {
-            it.assignMemberToTask(
+            it.assignPersonToTask(
                 taskId = taskId,
-                memberId = request.memberId,
+                personId = request.memberId,
                 projectId = projectId
             )
         }
@@ -291,9 +294,9 @@ class ProjectController(
     @GetMapping("/{projectId}/users") //done
     fun getUsers(
         @PathVariable projectId: String
-    ): ResponseEntity<List<UserResponse>> {
+    ): ResponseEntity<List<PersonResponse>> {
         val users = userProjectProjection.getProjectUsers(projectId).map {
-            UserResponse(
+            PersonResponse(
                 username = it.username,
                 firstName = it.firstName,
                 middleName = it.middleName,

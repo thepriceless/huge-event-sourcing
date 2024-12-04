@@ -9,7 +9,7 @@ data class StatusCreatedResponse(
 
 data class ProjectCreatedResponse(
     val projectCreatedEvent: ProjectCreatedEvent,
-    val memberCreatedEvent: MemberCreatedEvent,
+    val personAddedToProjectEvent: PersonAddedToProjectEvent,
     val statusCreatedEvent: StatusCreatedEvent,
 )
 
@@ -18,7 +18,12 @@ data class StatusDeletedResponse(
     val statusDeletedEvent: StatusDeletedEvent,
 )
 
-data class UserResponse(
+data class PersonCreatedResponse(
+    val personCreatedEvent: PersonCreatedEvent,
+    val userCreatedEvent: UserCreatedEvent,
+)
+
+data class PersonResponse(
     val username: String,
     val firstName: String,
     val middleName: String,

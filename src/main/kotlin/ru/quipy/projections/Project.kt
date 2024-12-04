@@ -4,11 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Modifying
-import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import ru.quipy.api.*
 import ru.quipy.logic.project.*
 import ru.quipy.streams.AggregateSubscriptionsManager
@@ -31,7 +28,7 @@ class ProjectProjection (
     val memberRepository: ProjectMemberRepository,
     val subscriptionsManager: AggregateSubscriptionsManager,
 ){
-    private val logger = LoggerFactory.getLogger(UserProjection::class.java)
+    private val logger = LoggerFactory.getLogger(PersonProjection::class.java)
 
     @PostConstruct
     fun init() {
@@ -94,7 +91,7 @@ class ProjectProjection (
                 }
                 logger.info("Update project projection, update task ${event.title}")
             }
-            `when`(MemberAssignedEvent::class) { event ->
+            `when`(PersonAssignedEvent::class) { event ->
                 withContext(Dispatchers.IO) {
                     taskRepository.findById(event.taskId.toString()).orElse(null)?.let { task ->
                         task.assignees.plus(event.memberId)
@@ -102,7 +99,7 @@ class ProjectProjection (
                 }
                 logger.info("Update project projection, update task ${event.taskId}")
             }
-            `when`(MemberCreatedEvent::class) { event ->
+            `when`(PersonAddedToProjectEvent::class) { event ->
                 withContext(Dispatchers.IO) {
                     memberRepository.save(ProjectMemberEntity(
                         id = event.username.toString(),
@@ -235,8 +232,8 @@ data class ProjectMemberEntity(
     val lastName: String = "",
 )
 
-fun ProjectMemberEntity.toDto(): MemberDto {
-    return MemberDto(
+fun ProjectMemberEntity.toDto(): PersonDto {
+    return PersonDto(
         id = UUID.fromString(this.id),
         username = this.username,
         firstName = this.firstName,

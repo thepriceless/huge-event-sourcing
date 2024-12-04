@@ -1,21 +1,16 @@
 package ru.quipy.config
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import ru.quipy.api.ProjectAggregate
+import ru.quipy.api.PersonAggregate
 import ru.quipy.api.UserAggregate
-import ru.quipy.core.AggregateRegistry
-import ru.quipy.core.BasicAggregateRegistry
 import ru.quipy.core.EventSourcingServiceFactory
-import ru.quipy.core.SeekingForSuitableClassesAggregateRegistry
 import ru.quipy.logic.project.ProjectAggregateState
-import ru.quipy.logic.project.UserAggregateState
-import ru.quipy.mapper.JsonEventMapper
-import ru.quipy.projections.UserProjection
+import ru.quipy.logic.person.PersonAggregateState
+import ru.quipy.logic.user.UserAggregateState
 import ru.quipy.streams.AggregateEventStreamManager
 import ru.quipy.streams.AggregateSubscriptionsManager
 import java.util.*
@@ -62,7 +57,10 @@ class EventSourcingLibConfiguration {
     fun projectService() = eventSourcingServiceFactory.create<UUID, ProjectAggregate, ProjectAggregateState>()
 
     @Bean
-    fun userService() = eventSourcingServiceFactory.create<String, UserAggregate, UserAggregateState>()
+    fun personService() = eventSourcingServiceFactory.create<UUID, PersonAggregate, PersonAggregateState>()
+
+    @Bean
+    fun userService() = eventSourcingServiceFactory.create<UUID, UserAggregate, UserAggregateState>()
 
     @PostConstruct
     fun init() {

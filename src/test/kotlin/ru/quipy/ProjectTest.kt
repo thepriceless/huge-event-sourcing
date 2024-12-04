@@ -31,7 +31,7 @@ class ProjectTest {
 
     @Test
     fun `member can be added to project`() {
-        val createMemberRequest = AddMemberToProjectRequest(username = user2.username)
+        val createMemberRequest = AddPersonToProjectRequest(username = user2.username)
 
         mockMvc.perform(
             post("/projects/$projectId/members")
@@ -88,7 +88,7 @@ class ProjectTest {
             .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
 
         // Добавляем юзера 3 в проект
-        val createMemberRequest = AddMemberToProjectRequest(username = user3.username)
+        val createMemberRequest = AddPersonToProjectRequest(username = user3.username)
 
         val addMember3ToProjectResponse = mockMvc.perform(
             post("/projects/$projectId/members")
@@ -316,7 +316,7 @@ class ProjectTest {
 
     @Test
     fun `two users with same username are prohibited`() {
-        val userWithSameName = CreateUserRequest(
+        val userWithSameName = CreatePersonRequest(
             username = user1.username,
             firstName = "asd",
             middleName = "Mbaasfasppe",
@@ -389,7 +389,7 @@ class ProjectTest {
         mockMvc.perform(
             post("/projects/$projectId/members")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(AddMemberToProjectRequest("non exist user name")))
+                .content(objectMapper.writeValueAsString(AddPersonToProjectRequest("non exist user name")))
         )
             .andExpect(status().isBadRequest)
     }
@@ -489,7 +489,7 @@ class ProjectTest {
             .readTree(taskCreatedEvent.response.contentAsString)["taskId"].asText()
 
         //добавляем мембера
-        val createMemberRequest = AddMemberToProjectRequest(username = user2.username)
+        val createMemberRequest = AddPersonToProjectRequest(username = user2.username)
 
         val memberCreated = mockMvc.perform(
             post("/projects/$projectId/members")
@@ -602,7 +602,7 @@ class ProjectTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(CreateProjectRequest(
                     title = "Get tasks project",
-                    username = user1.username
+                    personCreatorId = user1.username
                 )))
         ).andReturn()
 
@@ -724,7 +724,7 @@ class ProjectTest {
 
     companion object {
 
-        val user1 = CreateUserRequest(
+        val user1 = CreatePersonRequest(
             username = UUID.randomUUID().toString(),
             firstName = "Kylian",
             middleName = "Mbappe",
@@ -732,7 +732,7 @@ class ProjectTest {
             password = "test",
         )
 
-        val user2 = CreateUserRequest(
+        val user2 = CreatePersonRequest(
             username = UUID.randomUUID().toString(),
             firstName = "Yuri",
             middleName = "Zhirkov",
@@ -740,7 +740,7 @@ class ProjectTest {
             password = "test2",
         )
 
-        val user3 = CreateUserRequest(
+        val user3 = CreatePersonRequest(
             username = UUID.randomUUID().toString(),
             firstName = "3",
             middleName = "3",
@@ -795,7 +795,7 @@ class ProjectTest {
             // Создание проекта
             val createProjectRequest = CreateProjectRequest(
                 title = "New Project",
-                username = user1.username
+                personCreatorId = user1.username
             )
 
             val projectCreatedResponse = mockMvc.perform(

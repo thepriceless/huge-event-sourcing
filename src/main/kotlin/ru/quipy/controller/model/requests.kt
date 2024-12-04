@@ -4,7 +4,7 @@ import java.util.UUID
 
 data class CreateProjectRequest(
     val title: String,
-    val username: String,
+    val personCreatorId: UUID,
 )
 
 data class CreateStatusRequest(
@@ -12,7 +12,7 @@ data class CreateStatusRequest(
     val color: String,
 )
 
-data class CreateUserRequest(
+data class CreatePersonRequest(
     val username: String,
     val firstName: String,
     val middleName: String,
@@ -25,8 +25,8 @@ data class LoginUserRequest(
     val password: String,
 )
 
-data class AddMemberToProjectRequest(
-    val username: String,
+data class AddPersonToProjectRequest(
+    val personToAddId: UUID,
 )
 
 data class CreateTaskRequest(
