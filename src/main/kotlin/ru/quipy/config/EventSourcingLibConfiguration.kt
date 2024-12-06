@@ -5,11 +5,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import ru.quipy.api.ProjectAggregate
+import ru.quipy.api.PersonAggregate
 import ru.quipy.api.UserAggregate
 import ru.quipy.core.EventSourcingServiceFactory
 import ru.quipy.logic.project.ProjectAggregateState
-import ru.quipy.logic.project.UserAggregateState
+import ru.quipy.logic.person.PersonAggregateState
+import ru.quipy.logic.user.UserAggregateState
 import ru.quipy.streams.AggregateEventStreamManager
+import ru.quipy.streams.AggregateSubscriptionsManager
 import java.util.*
 import javax.annotation.PostConstruct
 
@@ -44,6 +47,9 @@ class EventSourcingLibConfiguration {
     @Autowired
     private lateinit var eventStreamManager: AggregateEventStreamManager
 
+    @Autowired
+    private lateinit var subscriptionsManager : AggregateSubscriptionsManager
+
     /**
      * Use this object to create/update the aggregate
      */
@@ -51,7 +57,10 @@ class EventSourcingLibConfiguration {
     fun projectService() = eventSourcingServiceFactory.create<UUID, ProjectAggregate, ProjectAggregateState>()
 
     @Bean
-    fun userService() = eventSourcingServiceFactory.create<String, UserAggregate, UserAggregateState>()
+    fun personService() = eventSourcingServiceFactory.create<UUID, PersonAggregate, PersonAggregateState>()
+
+    @Bean
+    fun userService() = eventSourcingServiceFactory.create<UUID, UserAggregate, UserAggregateState>()
 
     @PostConstruct
     fun init() {

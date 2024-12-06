@@ -7,7 +7,7 @@ import java.util.*
 
 fun ProjectAggregateState.createProject(
     title: String,
-    username: String,
+    personId: UUID,
 ): ProjectCreatedEvent {
     return ProjectCreatedEvent(
         title = title,
@@ -29,32 +29,37 @@ fun ProjectAggregateState.createTask(
     )
 }
 
-fun ProjectAggregateState.assignMemberToTask(
+fun ProjectAggregateState.assignPersonToTask(
     taskId: UUID,
-    memberId: UUID,
-): MemberAssignedEvent {
-    require(members.any { it.id == memberId }) { "Member doesn't exist" }
+    personId: UUID,
+    projectId: UUID,
+): PersonAssignedEvent {
+    require(members.any { it.id == personId }) { "Member doesn't exist" }
     val targetTask = tasks.first { it.id == taskId }
-    require(targetTask.assignees.none { it == memberId }) { "Member is already assigned" }
+    require(targetTask.assignees.none { it == personId }) { "Member is already assigned" }
 
-    return MemberAssignedEvent(
+    return PersonAssignedEvent(
         taskId = taskId,
-        memberId = memberId,
+        personId = personId,
+        projectId = projectId,
     )
 }
 
 fun ProjectAggregateState.updateTaskName(
     taskId: UUID,
     title: String,
+    projectId: UUID,
 ): TaskRenamedEvent {
     return TaskRenamedEvent(
         taskId = taskId,
         title = title,
+        projectId = projectId,
     )
 }
 
 fun ProjectAggregateState.updateTaskStatus(
     taskId: UUID,
+    projectId: UUID,
     statusId: UUID,
 ): TaskStatusUpdatedEvent {
     require(statuses.any { it.id == statusId }) { "Status doesn't exist" }
@@ -62,6 +67,7 @@ fun ProjectAggregateState.updateTaskStatus(
     return TaskStatusUpdatedEvent(
         taskId = taskId,
         statusId = statusId,
+        projectId = projectId,
     )
 }
 
@@ -79,40 +85,48 @@ fun ProjectAggregateState.createStatus(
 
 fun ProjectAggregateState.updateStatusOrder(
     orderedStatuses: List<UUID>,
+    projectId: UUID
 ): PossibleStatusesUpdatedEvent {
     return PossibleStatusesUpdatedEvent(
         statuses = orderedStatuses,
+        projectId = projectId,
     )
 }
 
 fun ProjectAggregateState.deleteStatus(
     statusId: UUID,
+    projectId: UUID
 ): StatusDeletedEvent {
-    require(tasks.none { it.status == statusId }) { "Status is assigned to tasks" }
+    require(tasks.none { it.statusId == statusId }) { "Status is assigned to tasks" }
 
     return StatusDeletedEvent(
         statusId = statusId,
+        projectId = projectId,
     )
 }
 
-fun ProjectAggregateState.createMember(
+fun ProjectAggregateState.addPerson(
     projectId: UUID,
-    username: String,
+    personId: UUID?,
+    username: String?,
     firstName: String?,
     middleName: String?,
     lastName: String?,
-): MemberCreatedEvent {
+): PersonAddedToProjectEvent {
+    require(members.none { it.id == personId }) { "Person is already a member" }
 
+    requireNotNull(personId) { "Person doesn't exist" }
+    requireNotNull(username) { "Username is required" }
     requireNotNull(firstName) { "First name is required" }
-    requireNotNull(lastName) { "Last name is required" }
     requireNotNull(middleName) { "Middle name is required" }
+    requireNotNull(lastName) { "Last name is required" }
 
-    return MemberCreatedEvent(
+    return PersonAddedToProjectEvent(
+        personId = personId,
         projectId = projectId,
         username = username,
         firstName = firstName,
         middleName = middleName,
         lastName = lastName,
-        memberId = UUID.randomUUID(),
     )
 }

@@ -3,17 +3,22 @@ package ru.quipy.controller
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import ru.quipy.api.*
-import ru.quipy.api.UserAggregate
+import ru.quipy.api.PersonAggregate
 import ru.quipy.controller.model.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.*
+import ru.quipy.logic.person.PersonAggregateState
+import ru.quipy.projections.*
 import java.util.*
 
 @RestController
 @RequestMapping("/projects")
 class ProjectController(
     val projectService: EventSourcingService<UUID, ProjectAggregate, ProjectAggregateState>,
-    val userService: EventSourcingService<String, UserAggregate, UserAggregateState>,
+    val personService: EventSourcingService<UUID, PersonAggregate, PersonAggregateState>,
+    val projectProjection: ProjectProjection,
+    val statusProjection: StatusProjection,
+    val taskProjection: TaskProjection,
 ) {
 
     @PostMapping
@@ -21,7 +26,7 @@ class ProjectController(
         val projectCreatedEvent = projectService.create {
             it.createProject(
                 title = request.title,
-                username = request.username,
+                personId = request.personCreatorId,
             )
         }
 
@@ -29,15 +34,16 @@ class ProjectController(
             it.createStatus()
         }
 
-        val memberCreatedEvent = projectService.update(projectCreatedEvent.projectId) {
-            val user = userService.getState(request.username)
+        val personAddedToProjectEvent = projectService.update(projectCreatedEvent.projectId) {
+            val person = personService.getState(request.personCreatorId)
 
-            it.createMember(
+            it.addPerson(
                 projectId = projectCreatedEvent.projectId,
-                username = request.username,
-                firstName = user?.firstName,
-                middleName = user?.middleName,
-                lastName = user?.lastName,
+                personId = person?.personId,
+                username = person?.username,
+                firstName = person?.firstName,
+                middleName = person?.middleName,
+                lastName = person?.lastName,
             )
         }
 
@@ -45,29 +51,30 @@ class ProjectController(
             ProjectCreatedResponse(
                 projectCreatedEvent = projectCreatedEvent,
                 statusCreatedEvent = statusCreatedEvent,
-                memberCreatedEvent = memberCreatedEvent,
+                personAddedToProjectEvent = personAddedToProjectEvent,
             )
         )
     }
 
-    @PostMapping("/{projectId}/members")
-    fun addMemberToProject(
+    @PostMapping("/{projectId}/persons")
+    fun addPersonToProject(
         @PathVariable projectId: UUID,
-        @RequestBody request: AddMemberToProjectRequest,
-    ): ResponseEntity<MemberCreatedEvent> {
-        val memberCreatedEvent = projectService.update(projectId) {
-            val user = userService.getState(request.username)
+        @RequestBody request: AddPersonToProjectRequest,
+    ): ResponseEntity<PersonAddedToProjectEvent> {
+        val personAddedToProjectEvent = projectService.update(projectId) {
+            val person = personService.getState(request.personToAddId)
 
-            it.createMember(
+            it.addPerson(
                 projectId = projectId,
-                username = request.username,
-                firstName = user?.firstName,
-                middleName = user?.middleName,
-                lastName = user?.lastName,
+                personId = person?.personId,
+                username = person?.username,
+                firstName = person?.firstName,
+                middleName = person?.middleName,
+                lastName = person?.lastName,
             )
         }
 
-        return ResponseEntity.ok(memberCreatedEvent)
+        return ResponseEntity.ok(personAddedToProjectEvent)
     }
 
     @PostMapping("/{projectId}/tasks")
@@ -88,19 +95,20 @@ class ProjectController(
     }
 
     @PostMapping("/{projectId}/{taskId}/assignees")
-    fun assignMemberToTask(
+    fun assignPersonToTask(
         @PathVariable projectId: UUID,
         @PathVariable taskId: UUID,
-        @RequestBody request: AddMemberToTaskRequest,
-    ): ResponseEntity<MemberAssignedEvent> {
-        val memberAssignedEvent = projectService.update(projectId) {
-            it.assignMemberToTask(
+        @RequestBody request: AddPersonToTaskRequest,
+    ): ResponseEntity<PersonAssignedEvent> {
+        val personAssignedEvent = projectService.update(projectId) {
+            it.assignPersonToTask(
                 taskId = taskId,
-                memberId = request.memberId,
+                personId = request.personId,
+                projectId = projectId
             )
         }
 
-        return ResponseEntity.ok(memberAssignedEvent)
+        return ResponseEntity.ok(personAssignedEvent)
     }
 
     @PostMapping("/{projectId}/{taskId}/status")
@@ -113,6 +121,7 @@ class ProjectController(
             it.updateTaskStatus(
                 taskId = taskId,
                 statusId = request.statusId,
+                projectId = projectId
             )
         }
 
@@ -129,6 +138,7 @@ class ProjectController(
             it.updateTaskName(
                 taskId = taskId,
                 title = request.title,
+                projectId = projectId
             )
         }
 
@@ -151,6 +161,7 @@ class ProjectController(
         val possibleStatusesUpdatedEvent = projectService.update(projectId) { projectAggregateState ->
             projectAggregateState.updateStatusOrder(
                 orderedStatuses = projectAggregateState.statuses.map { it.id } + statusCreatedEvent.statusId,
+                projectId = projectId,
             )
         }
 
@@ -170,6 +181,7 @@ class ProjectController(
         val possibleStatusesUpdatedEvent = projectService.update(projectId) {
             it.updateStatusOrder(
                 orderedStatuses = request.orderedStatuses,
+                projectId = projectId,
             )
         }
 
@@ -185,12 +197,14 @@ class ProjectController(
         val statusesUpdatedEvent = projectService.update(projectId) { projectState ->
             projectState.updateStatusOrder(
                 orderedStatuses = projectState.statuses.map { it.id }.filter { it != statusId },
+                projectId = projectId,
             )
         }
 
         val statusDeletedEvent = projectService.update(projectId) {
             it.deleteStatus(
                 statusId = statusId,
+                projectId = projectId,
             )
         }
 
@@ -202,18 +216,81 @@ class ProjectController(
         )
     }
 
-    @GetMapping("/{projectId}")
-    fun getAccount(@PathVariable projectId: UUID): ResponseEntity<ProjectAggregateState?> {
-        return ResponseEntity.ok(projectService.getState(projectId))
+    @GetMapping("/all") //done
+    fun getAllProjects(): ResponseEntity<List<ProjectDto>> {
+        return ResponseEntity.ok(projectProjection.getAllProjects().map { it.toDto() } )
     }
 
-    @GetMapping("/{projectId}/{taskId}")
-    fun getTask(
-        @PathVariable projectId: UUID,
-        @PathVariable taskId: UUID
-    ): ResponseEntity<TaskEntity?> {
+    @GetMapping("/users/{personId}") //done
+    fun getProjectsByPersonId(
+        @PathVariable personId: String
+    ): ResponseEntity<List<ProjectDto>?> {
+        val projects = projectProjection.getProjectsByPersonId(personId)
+        if (projects != null) //not a good contract, better make exceptions in service, but its okay
+            return ResponseEntity.ok(projects.map { it.toDto() })
+        else
+            return ResponseEntity.notFound().build()
+    }
+
+    @GetMapping("/tasks/all") //done
+    fun getAllTasks(): ResponseEntity<List<TaskDto>> {
+        val tasks = taskProjection.getAllTasks()
+        return ResponseEntity.ok(tasks.map { it.toDto() })
+    }
+
+    @GetMapping("/{projectId}/tasks") //done
+    fun getTasksByProjectId(
+        @PathVariable projectId: String
+    ): ResponseEntity<List<TaskDto>> {
+        val tasks = taskProjection.getTasksByProjectId(projectId)
+        if (tasks == null) return ResponseEntity.notFound().build() // pattern with null if proj not exists
+        return ResponseEntity.ok(tasks.map { it.toDto() })
+    }
+
+    @GetMapping("/{projectId}/tasks/by_status") //done
+    fun getTasksByStatusId(
+        @PathVariable projectId: String,
+        @RequestParam statusId: String
+    ): ResponseEntity<List<TaskDto>> {
         return ResponseEntity.ok(
-            projectService.getState(projectId)?.tasks?.firstOrNull { it.id == taskId }
+            taskProjection.getTasksByStatusId(statusId).map { it.toDto() }
         )
+    }
+
+    @GetMapping("/{projectId}/tasks/{taskId}")
+    fun getTask(
+        @PathVariable projectId: String,
+        @PathVariable taskId: String
+    ): ResponseEntity<TaskDto?> {
+        return ResponseEntity.ok(
+            taskProjection.getTaskById(taskId)?.toDto()
+        )
+    }
+
+    @GetMapping("/{projectId}/tasks/{taskId}/status")
+    fun getStatusByTaskId(
+        @PathVariable projectId: String,
+        @PathVariable taskId: String
+    ): ResponseEntity<StatusDto?> {
+        return ResponseEntity.ok(
+            statusProjection.getStatusByTaskId(taskId)?.toDto()
+        )
+    }
+
+    @GetMapping("/{projectId}/statuses")
+    fun getStatuses(
+        @PathVariable projectId: String
+    ): ResponseEntity<List<StatusDto>> {
+        return ResponseEntity.ok(
+            statusProjection.getStatusesByProjectId(projectId)?.map { it.toDto() } ?: emptyList()
+        )
+    }
+
+    @GetMapping("/{projectId}/persons") //done
+    fun getMembersByProjectID(
+        @PathVariable projectId: String
+    ): ResponseEntity<List<PersonResponse>> {
+        val users = projectProjection.getPersonsByProjectId(projectId)
+        return ResponseEntity.ok(users.map { it.toDto() })
     }
 }

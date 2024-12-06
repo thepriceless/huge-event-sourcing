@@ -8,9 +8,9 @@ import java.util.*
 class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     lateinit var projectId: UUID
     lateinit var title: String
-    var members = mutableListOf<MemberEntity>()
-    var tasks = mutableSetOf<TaskEntity>()
-    var statuses = mutableListOf<StatusEntity>()
+    var members = mutableListOf<PersonDto>()
+    var tasks = mutableSetOf<TaskDto>()
+    var statuses = mutableListOf<StatusDto>()
 
     override fun getId() = projectId
 
@@ -35,29 +35,29 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     @StateTransitionFunc
     fun taskCreatedApply(event: TaskCreatedEvent) {
         tasks.add(
-            TaskEntity(
+            TaskDto(
                 id = event.taskId,
                 projectId = event.projectId,
                 title = event.title,
-                status = event.statusId,
+                statusId = event.statusId,
                 assignees = event.assignees,
             )
         )
     }
 
     @StateTransitionFunc
-    fun memberAssignedToTaskApply(event: MemberAssignedEvent) {
+    fun personAssignedToTaskApply(event: PersonAssignedEvent) {
         tasks
             .first { it.id == event.taskId }
             .assignees
-            .add(event.memberId)
+            .add(event.personId)
     }
 
     @StateTransitionFunc
     fun taskStatusUpdatedApply(event: TaskStatusUpdatedEvent) {
         tasks
             .first { it.id == event.taskId }
-            .status = event.statusId
+            .statusId = event.statusId
     }
 
     @StateTransitionFunc
@@ -70,7 +70,7 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     @StateTransitionFunc
     fun statusCreatedApply(event: StatusCreatedEvent) {
         statuses.add(
-            StatusEntity(
+            StatusDto(
                 id = event.statusId,
                 projectId = event.projectId,
                 name = event.statusName,
@@ -80,10 +80,10 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     }
 
     @StateTransitionFunc
-    fun memberCreatedApply(event: MemberCreatedEvent) {
+    fun personAddedApply(event: PersonAddedToProjectEvent) {
         members.add(
-            MemberEntity(
-                id = event.memberId,
+            PersonDto(
+                id = event.personId,
                 username = event.username,
                 firstName = event.firstName,
                 middleName = event.middleName,
@@ -98,22 +98,27 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     }
 }
 
-data class TaskEntity(
+data class ProjectDto (
+    val id: UUID = UUID.randomUUID(),
+    val title: String,
+)
+
+data class TaskDto(
     val id: UUID = UUID.randomUUID(),
     val projectId: UUID,
     var title: String,
-    var status: UUID,
+    var statusId: UUID,
     val assignees: MutableList<UUID>
 )
 
-data class StatusEntity(
+data class StatusDto(
     val id: UUID = UUID.randomUUID(),
     val projectId: UUID,
     val name: String,
     val color: String
 )
 
-data class MemberEntity(
+data class PersonDto(
     val id: UUID = UUID.randomUUID(),
     val username: String,
     val firstName: String,
