@@ -15,6 +15,7 @@ import ru.quipy.logic.user.UserAggregateState
 import ru.quipy.logic.person.createPerson
 import ru.quipy.logic.user.createUser
 import ru.quipy.projections.PersonProjection
+import ru.quipy.projections.toDto
 import java.util.UUID
 
 @RestController
@@ -46,33 +47,24 @@ class UserController(
         return ResponseEntity.ok(personCreatedEvent)
     }
 
-    @GetMapping("/all")
+    @GetMapping("/person/all")
     fun getAllPersons(): ResponseEntity<List<PersonResponse>> {
-        val users = personProjection.getAllPersons()
-        return ResponseEntity.ok(
-            users.map {
-                PersonResponse(
-                    username = it.username,
-                    firstName = it.firstName,
-                    middleName = it.middleName,
-                    lastName = it.lastName,
-                )
-            }
-        )
+        return ResponseEntity.ok(personProjection.getAllPersons().map { it.toDto() })
     }
 
-    @GetMapping("/get")
-    fun getUserByID(
+    @GetMapping("/person/{personId}")
+    fun getPersonByID(
+        @RequestParam("personId") personId: String
+    ): ResponseEntity<PersonResponse> {
+        val user = personProjection.getPerson(personId) ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(user.toDto())
+    }
+
+    @GetMapping("/person/username/{username}")
+    fun getPersonByUsername(
         @RequestParam("username") username: String
     ): ResponseEntity<PersonResponse> {
-        val user = personProjection.getUser(username) ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(
-            PersonResponse(
-                username = user.username,
-                firstName = user.firstName,
-                middleName = user.middleName,
-                lastName = user.lastName,
-            )
-        )
+        val user = personProjection.getPersonByUsername(username) ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(user.toDto())
     }
 }

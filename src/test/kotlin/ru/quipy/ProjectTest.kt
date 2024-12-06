@@ -522,7 +522,7 @@ class ProjectTest {
     @Test
     fun `can get user`() {
         mockMvc.perform(
-            get("/users/get?username=${user1.username}")
+            get("/users/person/username${user1.username}")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.username").value(user1.username))
@@ -534,7 +534,7 @@ class ProjectTest {
     @Test
     fun `cant get non existent user`() {
         mockMvc.perform(
-            get("/users/get?username=non_existent_username")
+            get("/users/person/username/non_existent_username")
         )
             .andExpect(status().isNotFound)
     }
@@ -542,20 +542,11 @@ class ProjectTest {
     @Test
     fun `get all users`() {
         mockMvc.perform(
-            get("/users/all")
+            get("/users/person/all")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$.length()").value(3))
-    }
-
-    @Test
-    fun `can get project`() {
-        mockMvc.perform(
-            get("/projects/$projectId")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.id").value(projectId.toString()))
     }
 
     @Test
@@ -679,7 +670,7 @@ class ProjectTest {
     fun `get users by project` () {
         Thread.sleep(3000)
         mockMvc.perform(
-            get("/projects/$projectId/users")
+            get("/projects/$projectId/members")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())

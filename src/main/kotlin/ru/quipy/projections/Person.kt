@@ -8,9 +8,11 @@ import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import ru.quipy.api.PersonAggregate
 import ru.quipy.api.PersonCreatedEvent
+import ru.quipy.controller.model.PersonResponse
 import ru.quipy.streams.AggregateSubscriptionsManager
 import ru.quipy.streams.annotation.AggregateSubscriber
 import ru.quipy.streams.annotation.SubscribeEvent
+import java.util.*
 import javax.annotation.PostConstruct
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -21,7 +23,7 @@ import javax.persistence.Id
     aggregateClass = PersonAggregate::class, subscriberName = "person-projection"
 )
 class PersonProjection(
-    val userRepository: PersonRepository,
+    val personRepository: PersonRepository,
     val subscriptionsManager: AggregateSubscriptionsManager,
 ) {
     private val logger = LoggerFactory.getLogger(PersonProjection::class.java)
@@ -30,12 +32,14 @@ class PersonProjection(
     fun init() {
         subscriptionsManager.createSubscriber(PersonAggregate::class, "person:person-projection") {
             `when`(PersonCreatedEvent::class) { event ->
-                logger.info("User created: {}", event.username)
+                logger.info("Person created: {}", event.username)
             }
             `when`(PersonCreatedEvent::class) { event ->
                 withContext(Dispatchers.IO) {
-                    userRepository.save(
-                        UserEntity(
+                    personRepository.save(
+                        PersonEntity(
+                            event.personId.toString(),
+                            event.userId.toString(),
                             event.username,
                             event.firstName,
                             event.middleName,
@@ -43,36 +47,46 @@ class PersonProjection(
                         )
                     )
                 }
-                logger.info("Update user projection, create user ${event.username}")
+                logger.info("Update person projection, create person ${event.username}")
             }
         }
     }
 
-    fun getUser(username: String): UserEntity? {
-        logger.info("Get user ${username} request")
-        return userRepository.findById(username).orElse(null)
+    fun getPerson(personId: String): PersonEntity? {
+        logger.info("Get person ${personId} request")
+        return personRepository.findById(personId).orElse(null)
     }
 
-    fun getAllPersons(): List<UserEntity> {
-        logger.info("Get all users request")
-        return userRepository.findAll()
+    fun getPersonByUsername(username: String): PersonEntity? {
+        logger.info("Get person by username ${username} request")
+        return personRepository.findByUsername(username).orElse(null)
     }
 
-    @SubscribeEvent
-    fun userCreatedEventSubscriber(event: PersonCreatedEvent) {
-        logger.info("User created.\nId: ${event.username}")
+    fun getAllPersons(): List<PersonEntity> {
+        logger.info("Get all persons request")
+        return personRepository.findAll()
     }
 }
 
 @Entity
-data class UserEntity(
+data class PersonEntity(
     @Id
+    val personId: String = "",
+    val userId: String = "",
     val username: String = "",
     val firstName: String = "",
     val middleName: String = "",
-    val lastName: String = "",
-    val password: String = "",
+    val lastName: String = ""
+)
+
+fun PersonEntity.toDto() = PersonResponse(
+    username = username,
+    firstName = firstName,
+    middleName = middleName,
+    lastName = lastName
 )
 
 @Repository
-interface PersonRepository : JpaRepository<UserEntity, String>
+interface PersonRepository : JpaRepository<PersonEntity, String> {
+    fun findByUsername(username: String): Optional<PersonEntity>
+}

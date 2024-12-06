@@ -8,9 +8,7 @@ import ru.quipy.controller.model.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.project.*
 import ru.quipy.logic.person.PersonAggregateState
-import ru.quipy.projections.ProjectProjection
-import ru.quipy.projections.UserProjectProjection
-import ru.quipy.projections.toDto
+import ru.quipy.projections.*
 import java.util.*
 
 @RestController
@@ -18,8 +16,9 @@ import java.util.*
 class ProjectController(
     val projectService: EventSourcingService<UUID, ProjectAggregate, ProjectAggregateState>,
     val personService: EventSourcingService<UUID, PersonAggregate, PersonAggregateState>,
-    val userProjectProjection: UserProjectProjection,
-    val projectProjection: ProjectProjection
+    val projectProjection: ProjectProjection,
+    val statusProjection: StatusProjection,
+    val taskProjection: TaskProjection,
 ) {
 
     @PostMapping
@@ -222,34 +221,26 @@ class ProjectController(
         return ResponseEntity.ok(projectProjection.getAllProjects().map { it.toDto() } )
     }
 
-    @GetMapping("/{projectId}") //done
-    fun getProject(@PathVariable projectId: String): ResponseEntity<ProjectDto> {
-        val project = projectProjection.getProjectById(projectId)?.toDto() ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(project)
-    }
-
-    @GetMapping("/users/{username}") //done
-    fun getProjectByUsername(
-        @PathVariable username: String
-    ): ResponseEntity<ProjectDto?> {
-        val project = projectProjection.getProjectByUsername(username)?.toDto() ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(project)
+    @GetMapping("/users/{personId}") //done
+    fun getProjectsByPersonId(
+        @PathVariable personId: String
+    ): ResponseEntity<List<ProjectDto>?> {
+        val projects = projectProjection.getProjectsByPersonId(personId)
+        return ResponseEntity.ok(projects.map { it.toDto() })
     }
 
     @GetMapping("/tasks/all") //done
     fun getAllTasks(): ResponseEntity<List<TaskDto>> {
-        val tasks = projectProjection.getAllTasks()
+        val tasks = taskProjection.getAllTasks()
         return ResponseEntity.ok(tasks.map { it.toDto() })
     }
 
     @GetMapping("/{projectId}/tasks") //done
-    fun getTasks(
+    fun getTasksByProjectId(
         @PathVariable projectId: String
     ): ResponseEntity<List<TaskDto>> {
-        val project = projectProjection.getProjectById(projectId)?.toDto() ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(
-            projectProjection.getTaskByProjectId(projectId)?.map { it.toDto() } ?: emptyList()
-        )
+        val tasks = taskProjection.getTasksByProjectId(projectId)
+        return ResponseEntity.ok(tasks.map { it.toDto() })
     }
 
     @GetMapping("/{projectId}/tasks/by_status") //done
@@ -258,7 +249,7 @@ class ProjectController(
         @RequestParam statusId: String
     ): ResponseEntity<List<TaskDto>> {
         return ResponseEntity.ok(
-            projectProjection.getTasksByStatusId(statusId).map { it.toDto() }
+            taskProjection.getTasksByStatusId(statusId).map { it.toDto() }
         )
     }
 
@@ -268,7 +259,7 @@ class ProjectController(
         @PathVariable taskId: String
     ): ResponseEntity<TaskDto?> {
         return ResponseEntity.ok(
-            projectProjection.getTaskById(taskId)?.toDto()
+            taskProjection.getTaskById(taskId)?.toDto()
         )
     }
 
@@ -278,7 +269,7 @@ class ProjectController(
         @PathVariable taskId: String
     ): ResponseEntity<StatusDto?> {
         return ResponseEntity.ok(
-            projectProjection.getStatusByTaskId(taskId)?.toDto()
+            statusProjection.getStatusByTaskId(taskId)?.toDto()
         )
     }
 
@@ -287,22 +278,15 @@ class ProjectController(
         @PathVariable projectId: String
     ): ResponseEntity<List<StatusDto>> {
         return ResponseEntity.ok(
-            projectProjection.getStatusesByProjectId(projectId)?.map { it.toDto() } ?: emptyList()
+            statusProjection.getStatusesByProjectId(projectId)?.map { it.toDto() } ?: emptyList()
         )
     }
 
-    @GetMapping("/{projectId}/users") //done
-    fun getUsers(
+    @GetMapping("/{projectId}/members") //done
+    fun getMembersByProjectID(
         @PathVariable projectId: String
     ): ResponseEntity<List<PersonResponse>> {
-        val users = userProjectProjection.getProjectUsers(projectId).map {
-            PersonResponse(
-                username = it.username,
-                firstName = it.firstName,
-                middleName = it.middleName,
-                lastName = it.lastName,
-            )
-        }
-        return ResponseEntity.ok(users)
+        val users = projectProjection.getPersonsByProjectId(projectId)
+        return ResponseEntity.ok(users.map { it.toDto() })
     }
 }
