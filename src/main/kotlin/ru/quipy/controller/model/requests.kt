@@ -36,8 +36,8 @@ data class CreateTaskRequest(
     val assignees: List<UUID> = emptyList(),
 )
 
-data class AddMemberToTaskRequest(
-    val memberId: UUID,
+data class AddPersonToTaskRequest(
+    val personId: UUID,
 )
 
 data class UpdateTaskStatusRequest(

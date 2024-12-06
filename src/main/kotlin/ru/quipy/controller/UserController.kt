@@ -5,9 +5,7 @@ import org.springframework.web.bind.annotation.*
 import ru.quipy.api.PersonAggregate
 import ru.quipy.api.PersonCreatedEvent
 import ru.quipy.api.UserAggregate
-import ru.quipy.api.UserCreatedEvent
 import ru.quipy.controller.model.CreatePersonRequest
-import ru.quipy.controller.model.PersonCreatedResponse
 import ru.quipy.controller.model.PersonResponse
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.person.PersonAggregateState
@@ -30,6 +28,8 @@ class UserController(
     fun createUser(
         @RequestBody request: CreatePersonRequest
     ): ResponseEntity<PersonCreatedEvent> {
+        if (personProjection.getPersonByUsername(request.username) != null)
+            return ResponseEntity.badRequest().build();
         val userCreatedEvent = userService.create {
             it.createUser(request.password)
         }
@@ -54,7 +54,7 @@ class UserController(
 
     @GetMapping("/person/{personId}")
     fun getPersonByID(
-        @RequestParam("personId") personId: String
+        @PathVariable("personId") personId: String
     ): ResponseEntity<PersonResponse> {
         val user = personProjection.getPerson(personId) ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(user.toDto())
@@ -62,7 +62,7 @@ class UserController(
 
     @GetMapping("/person/username/{username}")
     fun getPersonByUsername(
-        @RequestParam("username") username: String
+        @PathVariable("username") username: String
     ): ResponseEntity<PersonResponse> {
         val user = personProjection.getPersonByUsername(username) ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(user.toDto())

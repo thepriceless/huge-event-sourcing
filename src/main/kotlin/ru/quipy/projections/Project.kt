@@ -13,8 +13,10 @@ import ru.quipy.streams.AggregateSubscriptionsManager
 import ru.quipy.streams.annotation.AggregateSubscriber
 import java.util.*
 import javax.annotation.PostConstruct
+import javax.persistence.ElementCollection
 import javax.persistence.Entity
 import javax.persistence.Id
+import javax.persistence.OneToMany
 
 @Service
 @AggregateSubscriber(
@@ -71,16 +73,16 @@ class ProjectProjection (
         }
     }
 
-    fun getProjectsByPersonId(personId: String): List<ProjectEntity> {
-        val project = projectMemberRepository.findById(personId)
-        if (project.isPresent) {
-            return project.get().projects.map { projectRepository.findById(it).get() }
+    fun getProjectsByPersonId(personId: String): List<ProjectEntity>? {
+        val projectMember = projectMemberRepository.findById(personId)
+        if (projectMember.isPresent) {
+            return projectMember.get().projects
         }
-        return listOf()
+        return null
     }
 
     fun getPersonsByProjectId(projectId: String): List<PersonEntity> {
-        val members = projectMemberRepository.findByProjectId(projectId)
+        val members = projectMemberRepository.findByProjectsId(projectId)
         return members.map { personRepository.findById(it.id).get() }
     }
 
@@ -92,15 +94,17 @@ class ProjectProjection (
 @Entity
 data class ProjectEntity(
     @Id
-    val projectId: String = "",
+    val id: String = "",
     val title: String = "",
+    @ElementCollection
     val members: List<String> = listOf(),
+    @ElementCollection
     val tasks: List<String> = listOf(),
 )
 
 fun ProjectEntity.toDto(): ProjectDto {
     return ProjectDto(
-        id = UUID.fromString(this.projectId),
+        id = UUID.fromString(this.id),
         title = this.title
     )
 }
@@ -109,7 +113,8 @@ fun ProjectEntity.toDto(): ProjectDto {
 data class ProjectMemberEntity(
     @Id
     val id: String = "",
-    val projects: List<String> = listOf(),
+    @OneToMany
+    val projects: List<ProjectEntity> = listOf(),
     val username: String = "",
 )
 
@@ -118,5 +123,5 @@ interface ProjectRepository : JpaRepository<ProjectEntity, String>
 
 @Repository
 interface ProjectMemberRepository : JpaRepository<ProjectMemberEntity, String> {
-    fun findByProjectId(projectId: String): List<ProjectMemberEntity>
+    fun findByProjectsId(projectId: String): List<ProjectMemberEntity>
 }

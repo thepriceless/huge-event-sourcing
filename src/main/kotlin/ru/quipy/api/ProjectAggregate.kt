@@ -91,7 +91,7 @@ class TaskRenamedEvent(
 
 @DomainEvent(name = PERSON_ASSIGNED_EVENT)
 class PersonAssignedEvent(
-    val memberId: UUID,
+    val personId: UUID,
     val taskId: UUID,
     val projectId: UUID,
 ) : Event<ProjectAggregate>(

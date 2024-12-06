@@ -46,11 +46,11 @@ class ProjectAggregateState : AggregateState<UUID, ProjectAggregate> {
     }
 
     @StateTransitionFunc
-    fun memberAssignedToTaskApply(event: PersonAssignedEvent) {
+    fun personAssignedToTaskApply(event: PersonAssignedEvent) {
         tasks
             .first { it.id == event.taskId }
             .assignees
-            .add(event.memberId)
+            .add(event.personId)
     }
 
     @StateTransitionFunc

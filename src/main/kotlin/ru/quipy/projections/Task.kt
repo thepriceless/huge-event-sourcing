@@ -12,8 +12,10 @@ import ru.quipy.streams.AggregateSubscriptionsManager
 import ru.quipy.streams.annotation.AggregateSubscriber
 import java.util.*
 import javax.annotation.PostConstruct
+import javax.persistence.ElementCollection
 import javax.persistence.Entity
 import javax.persistence.Id
+import javax.persistence.OneToMany
 
 @Service
 @AggregateSubscriber(
@@ -23,6 +25,7 @@ class TaskProjection (
     val taskRepository: ProjectTaskRepository,
     val personRepository: PersonRepository,
     val statusRepository: StatusRepository,
+    val projectRepository: ProjectRepository,
     val subscriptionsManager: AggregateSubscriptionsManager,
 ){
     private val logger = LoggerFactory.getLogger(PersonProjection::class.java)
@@ -62,7 +65,7 @@ class TaskProjection (
             `when`(PersonAssignedEvent::class) { event ->
                 withContext(Dispatchers.IO) {
                     taskRepository.findById(event.taskId.toString()).orElse(null)?.let { task ->
-                        task.assignees.plus(event.memberId)
+                        task.assignees.plus(event.personId)
                     }
                 }
                 logger.info("Update task projection, update task ${event.taskId}")
@@ -70,7 +73,8 @@ class TaskProjection (
         }
     }
 
-    fun getTasksByProjectId(projectId: String): List<ProjectTaskEntity> {
+    fun getTasksByProjectId(projectId: String): List<ProjectTaskEntity>? {
+        if (projectRepository.findById(projectId).isEmpty) return null
         return taskRepository.findAllByProjectId(projectId)
     }
 
@@ -94,6 +98,7 @@ class ProjectTaskEntity(
     val projectId: String = "",
     var title: String = "",
     var statusId: String = "",
+    @ElementCollection
     val assignees: MutableList<String> = mutableListOf()
 )
 

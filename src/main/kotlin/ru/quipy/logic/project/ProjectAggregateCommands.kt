@@ -40,7 +40,7 @@ fun ProjectAggregateState.assignPersonToTask(
 
     return PersonAssignedEvent(
         taskId = taskId,
-        memberId = personId,
+        personId = personId,
         projectId = projectId,
     )
 }

@@ -56,12 +56,12 @@ class ProjectController(
         )
     }
 
-    @PostMapping("/{projectId}/members")
-    fun addMemberToProject(
+    @PostMapping("/{projectId}/persons")
+    fun addPersonToProject(
         @PathVariable projectId: UUID,
         @RequestBody request: AddPersonToProjectRequest,
     ): ResponseEntity<PersonAddedToProjectEvent> {
-        val memberCreatedEvent = projectService.update(projectId) {
+        val personAddedToProjectEvent = projectService.update(projectId) {
             val person = personService.getState(request.personToAddId)
 
             it.addPerson(
@@ -74,7 +74,7 @@ class ProjectController(
             )
         }
 
-        return ResponseEntity.ok(memberCreatedEvent)
+        return ResponseEntity.ok(personAddedToProjectEvent)
     }
 
     @PostMapping("/{projectId}/tasks")
@@ -95,20 +95,20 @@ class ProjectController(
     }
 
     @PostMapping("/{projectId}/{taskId}/assignees")
-    fun assignMemberToTask(
+    fun assignPersonToTask(
         @PathVariable projectId: UUID,
         @PathVariable taskId: UUID,
-        @RequestBody request: AddMemberToTaskRequest,
+        @RequestBody request: AddPersonToTaskRequest,
     ): ResponseEntity<PersonAssignedEvent> {
-        val memberAssignedEvent = projectService.update(projectId) {
+        val personAssignedEvent = projectService.update(projectId) {
             it.assignPersonToTask(
                 taskId = taskId,
-                personId = request.memberId,
+                personId = request.personId,
                 projectId = projectId
             )
         }
 
-        return ResponseEntity.ok(memberAssignedEvent)
+        return ResponseEntity.ok(personAssignedEvent)
     }
 
     @PostMapping("/{projectId}/{taskId}/status")
@@ -226,7 +226,10 @@ class ProjectController(
         @PathVariable personId: String
     ): ResponseEntity<List<ProjectDto>?> {
         val projects = projectProjection.getProjectsByPersonId(personId)
-        return ResponseEntity.ok(projects.map { it.toDto() })
+        if (projects != null) //not a good contract, better make exceptions in service, but its okay
+            return ResponseEntity.ok(projects.map { it.toDto() })
+        else
+            return ResponseEntity.notFound().build()
     }
 
     @GetMapping("/tasks/all") //done
@@ -240,6 +243,7 @@ class ProjectController(
         @PathVariable projectId: String
     ): ResponseEntity<List<TaskDto>> {
         val tasks = taskProjection.getTasksByProjectId(projectId)
+        if (tasks == null) return ResponseEntity.notFound().build() // pattern with null if proj not exists
         return ResponseEntity.ok(tasks.map { it.toDto() })
     }
 
@@ -282,7 +286,7 @@ class ProjectController(
         )
     }
 
-    @GetMapping("/{projectId}/members") //done
+    @GetMapping("/{projectId}/persons") //done
     fun getMembersByProjectID(
         @PathVariable projectId: String
     ): ResponseEntity<List<PersonResponse>> {

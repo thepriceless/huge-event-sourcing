@@ -10,6 +10,7 @@ fun PersonAggregateState.createPerson(
     lastName: String,
     userId: UUID,
 ): PersonCreatedEvent {
+
     return PersonCreatedEvent(
         username = username,
         firstName = firstName,
